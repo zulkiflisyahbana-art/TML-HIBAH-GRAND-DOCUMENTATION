@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="TML HIBAH – Grand Documentation: pembuat Commercial Invoice dan Packing List untuk pengiriman hibah, PT Tri Mandiri Logistik.">
+<title>TML HIBAH – Grand Documentation</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <img class="logo" src="assets/logo.png" alt="Logo PT Tri Mandiri Logistik" width="46" height="46">
+    <div class="ttl"><h1>TML HIBAH – Grand Documentation</h1><p>PT Tri Mandiri Logistik · Dokumen Hibah &amp; Pengiriman Internasional</p></div>
+    <div class="pill"><i></i><span id="pillT">Disimpan di perangkat</span></div>
+    <button class="gear" id="bCfg" title="Pengaturan penyimpanan tim" aria-label="Pengaturan">⚙</button>
+  </div>
+</header>
+<nav class="tabs"><div class="tabs-in"><button data-go="isi" class="on">✏️ Isi Data</button><button data-go="ver">✅ Verifikasi</button><button data-go="xls">📊 Excel</button></div></nav>
+<main>
+  <section class="card" id="cfg" hidden>
+    <h2>Pengaturan penyimpanan bersama (opsional)</h2>
+    <p class="sub">Tanpa pengaturan ini, proyek tersimpan di browser perangkat ini saja. Untuk berbagi dengan tim, tempel URL Web App Google Apps Script (lihat README, folder <code>optional-backend</code>).</p>
+    <div class="row"><input id="cfgUrl" placeholder="https://script.google.com/macros/s/…/exec"><button id="bCfgSave" class="sm">Simpan pengaturan</button></div>
+    <p class="sub" id="cfgMsg"></p>
+  </section>
+
+  <div class="tab" data-tab="isi">
+  <section class="card">
+    <div class="row">
+      <select id="projSel"></select>
+      <button id="bNew" class="sm">Proyek baru</button>
+      <button id="bEx" class="sm">Isi contoh Party 2</button>
+      <button id="bDelP" class="sm d" hidden>Hapus proyek tersimpan</button>
+    </div>
+    <p class="sub">Klik ▾ pada kolom untuk memilih data yang pernah dipakai. Jika belum ada, ketik langsung.</p>
+  </section>
+
+  <section class="card"><h2>Data proyek</h2><p class="sub" style="margin:-6px 0 12px">Isi semua kolom, lalu pindah ke tab Verifikasi atau Excel.</p><div class="g" id="hdr"></div></section>
+  <section class="card"><h2>Shipper dan Consignee</h2>
+    <div class="g">
+      <div class="w"><label>Shipper (maks. 5 baris) <button type="button" class="dd2" data-k="shipper" data-t="shipper">Pilih ▾</button></label><textarea id="shipper" data-ml="shipper"></textarea></div>
+      <div class="w"><label>Consignee (maks. 8 baris, sesuai B/L dan NPWP) <button type="button" class="dd2" data-k="consignee" data-t="consignee">Pilih ▾</button></label><textarea id="consignee" data-ml="consignee"></textarea></div>
+    </div>
+  </section>
+
+  <h2 class="sec">Unit kendaraan</h2>
+  <div id="units"></div>
+  <div class="row mb"><button class="p" id="bAdd">+ Unit</button><span class="sub nm" id="uCount"></span></div>
+
+  </div>
+  <div class="tab" data-tab="ver" hidden>
+  <section class="card"><h2>Dokumen pembanding (opsional)</h2>
+    <p class="sub">Ketik ulang data dari Bill of Lading dan MoU agar aplikasi bisa mencocokkan dengan isi form. Pencocokan dilakukan terhadap data yang Anda ketik, bukan membaca file dokumen.</p>
+    <div class="g">
+      <div><label>Daftar chassis menurut B/L (1 baris = 1 unit)</label><textarea id="blChassis" data-s="blChassis"></textarea></div>
+      <div><label>Data MoU: chassis dan berat, contoh <code>KMFLA18TPFC092868 10955</code></label><textarea id="mou" data-s="mou"></textarea></div>
+    </div>
+  </section>
+
+  <section class="card"><h2>Pemeriksaan otomatis</h2><div id="checks"></div>
+    <div class="row" style="margin-top:10px"><button id="bRep" class="sm">Buat laporan verifikasi</button></div>
+  </section>
+  <section class="card" id="repCard" hidden><h2>Laporan verifikasi</h2>
+    <p class="sub">Status dihitung dari data yang diinput. <b>VERIFIED</b> = lolos pemeriksaan otomatis. <b>NEED CONFIRMATION</b> = cocokkan dengan dokumen sumber. Aplikasi tidak menentukan sendiri data mana yang benar.</p>
+    <div class="tw"><table id="rep"></table></div>
+    <div class="row" style="margin-top:10px"><button class="sm" id="bRepDl">Unduh laporan (.html)</button><button class="sm" id="bRepPr">Cetak laporan</button></div>
+  </section>
+
+  </div>
+  <div class="tab" data-tab="xls" hidden>
+  <section class="card"><h2>Hasil dan berkas</h2>
+    <div class="row"><button class="p" id="bCI">Unduh Commercial Invoice (.xlsx)</button><button class="p" id="bPL">Unduh Packing List (.xlsx)</button></div>
+    <div id="msg"></div>
+    <p class="sub">Buka file di Excel lalu cetak. Area cetak sudah diatur di template. Jumlah unit di Excel mengikuti daftar unit; 3–5 unit otomatis dimuatkan ke 1 halaman.</p>
+    <hr>
+    <div class="row"><button id="bSave" class="sm">Simpan proyek</button>
+      <button id="bExp" class="sm">Ekspor proyek (.json)</button>
+      <label class="fl sm">Impor proyek (.json)<input type="file" id="fJson" accept=".json,application/json" hidden></label>
+      <label class="fl sm">Impor dari Excel CI/PL (.xlsx)<input type="file" id="fXls" accept=".xlsx" hidden></label></div>
+    <div id="plist" class="sub"></div>
+  </section>
+  </div>
+</main>
+<footer>© PT Tri Mandiri Logistik · TML HIBAH – Grand Documentation</footer>
+<script src="assets/vendor/jszip.min.js"></script>
+<script src="assets/templates-data.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
