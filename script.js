@@ -108,7 +108,7 @@ function parseSheet({kind,cells}){
   return out;
 }
 /* ============ Aplikasi ============ */
-const D={name:'PARTY_2_OF_4',invNo:'SWC-OCTOBER-13 2026',invDate:'Oct 13-2026',depart:'',vessel:'',from:'Incheon,Republic of Korea',to:'Jakarta-Indonesia',blTotal:'21620',blQty:'2',blChassis:'KMFLA18TPFC092868\nKMFLA18TPFC092108',mou:'KMFLA18TPFC092868 10955\nKMFLA18TPFC092108 10665',
+const D={name:'PARTY_2_OF_4',invNo:'SWC-OCTOBER-13 2026',invDate:'Oct 13-2026',depart:'',vessel:'',from:'Incheon,Republic of Korea',to:'Jakarta-Indonesia',blTotal:'21620',blQty:'2',blChassis:'KMFLA18TPFC092868\nKMFLA18TPFC092108',mou:'KMFLA18TPFC092868 10955 210500000\nKMFLA18TPFC092108 10665 212272000',
 shipper:['SOCIAL WELFARE CORPORATION GO AND DO','80-22, Hanyuji-gil, Poseung-eup, Pyeongtaek-si, Gyeonggi-do,','Republic of Korea','TEL : (+82) 031-683-6491 ','FAX : (+82) 031-601-6417'],
 consignee:['DIREKTORAT JENDERAL BINA ADMINISTRASI KEWILAYAHAN','DITJEN BINA ADMINISTRASI KEWILAYAHAN,KEMENTERIAN DALAM NEGERI','Medan Merdeka Utara 7,Medan Merdeka Utara ,Gambir,Gambir,','Kota ADM,Jakarta Pusat ,DKI Jakarta ,10110','Tel : +62 8122566520 +62 81313106941,+62 81284088281','Email : subditssarpras.infodamkar@gmail.com. Danang.ins@gmail.com ','vitus.nd15@gmail.com','ATTN: Danang Insita Putra, ST., M.Si(Han),Ph.d.'],
 units:[{brand:'HYUNDAI',model:'FIRE TRUCK',vin:'KMFLA18TPFC092868',year:'2015',cyl:'5,899 CC',eng:'DIESEL',color:'RED&WHITE',kg:'10810',price:'210500000'},{brand:'HYUNDAI',model:'FIRE TRUCK',vin:'KMFLA18TPFC092108',year:'2015',cyl:'5,899 CC',eng:'DIESEL',color:'RED&WHITE',kg:'10810',price:'212272000'}]};
@@ -118,7 +118,7 @@ const HF=[['name','Nama proyek (untuk nama file)'],['invNo','No. invoice'],['inv
 const UF=[['brand','Brand'],['model','Model'],['vin','VIN / Chassis'],['year','Year'],['cyl','Cylinder'],['eng','Engine (jenis)'],['color','Color'],['kg','Berat (kg), net = gross'],['price','Harga satuan (₩)'],['engNo','Nomor mesin (opsional, hanya laporan)'],['dim','Dimensi P×L×T (opsional, hanya laporan)']];
 const CP='<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-let S, OPT={}, SAVED=[], UID=0, PK='CI';
+let S, OPT={}, SAVED=[], UID=0, PK='CI', FT=new Set();
 const rid=()=>Math.random().toString(36).slice(2,10);
 const cfg=()=>LS.get('tml_cfg',{url:''});
 const note=t=>document.querySelectorAll('.note').forEach(e=>e.textContent=t);
@@ -127,7 +127,7 @@ const addOpt=(k,v)=>{v=String(v??'').trim();if(v)(OPT[k]=OPT[k]||new Set()).add(
 function learn(s){HF.forEach(([k])=>addOpt(k,s[k]));(s.units||[]).forEach(u=>UF.forEach(([k])=>addOpt(k,u[k])));addOpt('shipper',(s.shipper||[]).join('\n'));addOpt('consignee',(s.consignee||[]).join('\n'));}
 function persistOpts(){const o={};for(const k in OPT)o[k]=[...OPT[k]];LS.set('tml_opts',o);}
 const fresh=()=>({key:rid(),confirmed:null,name:'',invNo:'',invDate:'',depart:'',vessel:'',from:D.from,to:D.to,blTotal:'',blQty:'',blChassis:'',mou:'',shipper:[...D.shipper],consignee:[...D.consignee],units:[blank()]});
-const example=()=>({...D,key:rid(),confirmed:null,shipper:[...D.shipper],consignee:[...D.consignee],units:D.units.map(u=>blank({...u,edit:false}))});
+const example=()=>({...D,key:(S&&S.key)||rid(),confirmed:null,shipper:[...D.shipper],consignee:[...D.consignee],units:D.units.map(u=>blank({...u,edit:false}))});
 const clean=s=>({...s,units:s.units.map(({id,edit,sure,ai,...u})=>u)});
 const hydrate=d=>{const u=(d.units||[]).map(x=>blank({...x,edit:false}));return {...fresh(),...d,key:d.key||rid(),units:u.length?u:[blank()]};};
 let dT;function draft(){clearTimeout(dT);dT=setTimeout(()=>LS.set('tml_draft',clean(read())),250);}
@@ -151,7 +151,9 @@ function analyze(s){
   const R=[], A=(info,data,status,note,go)=>R.push({info,data,status,note:note||'',go});
   const n=s.units.length, bl=num(s.blTotal), blq=num(s.blQty);
   const list=(s.blChassis||'').split('\n').map(x=>x.trim().toUpperCase()).filter(Boolean);
-  const mou={}; (s.mou||'').split('\n').forEach(l=>{const m=l.match(/([A-HJ-NPR-Z0-9]{17})\D+([\d.,]+)/i); if(m)mou[m[1].toUpperCase()]=num(m[2]);});
+  const it=x=>/^\d{1,3}([.,]\d{3})+$/.test(x)?Number(x.replace(/[.,]/g,'')):num(x);
+  const mou={}; (s.mou||'').split('\n').forEach(l=>{const m=l.match(/([A-HJ-NPR-Z0-9]{17})\s+([\d.,]+)(?:\s+[₩W]?\s*([\d.,]+))?/i); if(m)mou[m[1].toUpperCase()]={kg:it(m[2]),price:m[3]?it(m[3]):null};});
+  [['B/L','B/L'],['MoU / Perjanjian Hibah','MoU'],['NPWP','NPWP']].forEach(([t,nm])=>A('Dokumen sumber · '+nm,FT.has(t)?'Terlampir':'Belum diunggah',FT.has(t)?'VERIFIED':'MISSING',FT.has(t)?'':'Unggah di tab Isi Data, bagian Unggah dokumen',{id:'fType'}));
   A('Jumlah unit',n+' unit',!n?'MISSING':blq?(n===blq?'VERIFIED':'CONFLICT'):'NEED CONFIRMATION',blq?'B/L: '+blq+' unit':'Isi "Jumlah unit di B/L" untuk mencocokkan',{id:'h_blQty'});
   A('No. invoice',s.invNo||'-',s.invNo.trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan keterangan invoice di B/L',{id:'h_invNo'});
   A('Shipper',(s.shipper[0]||'-'),s.shipper.join('').trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan B/L',{id:'shipper'});
@@ -169,8 +171,9 @@ function analyze(s){
     A(L+' · Cylinder / Engine / Color',[u.cyl,u.eng,u.color].filter(Boolean).join(' / ')||'-',(u.cyl&&u.eng&&u.color)?'NEED CONFIRMATION':'MISSING','Belum ada di B/L dan MoU; ikuti template atau spesifikasi kendaraan',G('cyl'));
     A(L+' · Nomor mesin',u.engNo||'-',u.engNo.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template',G('engNo'));
     A(L+' · Dimensi',u.dim||'-',u.dim.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template',G('dim'));
-    const mw=mou[v]; A(L+' · Berat',fmt(num(u.kg))+' kg',!num(u.kg)?'MISSING':(mw==null?'NEED CONFIRMATION':(mw===num(u.kg)?'VERIFIED':'CONFLICT')),mw==null?'Isi data MoU untuk mencocokkan':'MoU: '+fmt(mw)+' kg',G('kg'));
-    A(L+' · Harga satuan','₩'+fmt(num(u.price)).replace('.00',''),num(u.price)>0?'NEED CONFIRMATION':'MISSING','Cocokkan dengan lampiran MoU',G('price'));
+    const mm=mou[v], mw=mm?mm.kg:null; A(L+' · Berat',fmt(num(u.kg))+' kg',!num(u.kg)?'MISSING':(mw==null?'NEED CONFIRMATION':(mw===num(u.kg)?'VERIFIED':'CONFLICT')),mw==null?'Isi data MoU untuk mencocokkan':'MoU: '+fmt(mw)+' kg',G('kg'));
+    const pr=num(u.price), mp=mm?mm.price:null, same=s.units.findIndex((x,j)=>j!==i&&num(x.price)>0&&num(x.price)===pr);
+    A(L+' · Harga satuan','₩'+fmt(pr).replace('.00',''),pr<=0?'MISSING':(mp==null?'NEED CONFIRMATION':(mp===pr?'VERIFIED':'CONFLICT')),mp!=null?'MoU: ₩'+fmt(mp).replace('.00',''):(same>=0?'Sama dengan Unit '+(same+1)+'; pastikan benar sesuai lampiran MoU':'Cocokkan dengan lampiran MoU; atau isi harga di data MoU'),G('price'));
   });
   Object.keys(seen).filter(k=>k&&seen[k]>1).forEach(k=>A('VIN kembar',k,'CONFLICT','Dipakai oleh '+seen[k]+' unit'));
   list.filter(v=>!s.units.some(u=>u.vin.trim().toUpperCase()===v)).forEach(v=>A('Chassis di B/L belum ada di form',v,'CONFLICT','Tambahkan unit'));
@@ -231,9 +234,10 @@ const IDB={db:null,open(){return this.db?Promise.resolve(this.db):new Promise((r
   async tx(mode,fn){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('files',mode),q=fn(t.objectStore('files'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);});},
   add(r){return this.tx('readwrite',s=>s.add(r));},list(p){return this.tx('readonly',s=>s.index('pid').getAll(p));},get(i){return this.tx('readonly',s=>s.get(i));},del(i){return this.tx('readwrite',s=>s.delete(i));}};
 const kb=n=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
-async function renderFiles(){ let L=[]; try{L=await IDB.list(S.key)||[];}catch(e){}
+async function renderFiles(){ let L=[]; try{L=await IDB.list(S.key)||[];}catch(e){} FT=new Set(L.map(f=>f.type));
   const h=L.length?L.map(f=>'<div class="fr"><span><b>'+esc(f.type)+'</b> · '+esc(f.name)+' <i>'+kb(f.size)+'</i></span><span class="row"><button class="sm" data-f="view" data-id="'+f.id+'">Lihat</button>'+(/\.xlsx$/i.test(f.name)?'<button class="sm" data-f="imp" data-id="'+f.id+'">Impor ke form</button>':'')+'<button class="sm d" data-f="del" data-id="'+f.id+'">Hapus</button></span></div>').join(''):'<div class="sub">Belum ada lampiran.</div>';
-  $('files').innerHTML=h; $('filesV').innerHTML=h; }
+  $('files').innerHTML=h; $('filesV').innerHTML=h;
+  $('docChk').innerHTML=[['B/L','B/L'],['MoU / Perjanjian Hibah','MoU'],['NPWP','NPWP']].map(([t,n])=>'<span class="dchip '+(FT.has(t)?'ok':'miss')+'">'+(FT.has(t)?'✓ ':'⚠ ')+n+(FT.has(t)?' terlampir':' belum diunggah')+'</span>').join(''); if(S)renderRep(); }
 let viewURL=null;
 async function viewFile(id){ const f=await IDB.get(id); if(!f)return; if(viewURL)URL.revokeObjectURL(viewURL); viewURL=URL.createObjectURL(f.blob);
   const pdf=/pdf/i.test(f.mime)||/\.pdf$/i.test(f.name), img=/^image\//.test(f.mime);
@@ -289,8 +293,8 @@ $('bSaveGo').onclick=async()=>{ if(await save()){ tab('ver'); } };
 $('bEdit').onclick=()=>tab('isi');
 $('bSaveV').onclick=()=>save();
 $('bConf').onclick=async()=>{ if(!S.units.length){note('Tambahkan minimal 1 unit.');return;} if(!S.name.trim()){note('Isi nama proyek dulu.');goEdit({id:'h_name'});return;}
-  const nc=analyze(read()).filter(r=>r.status==='CONFLICT').length;
-  if(nc&&!armed){armed=true;$('bConf').textContent='Masih ada '+nc+' CONFLICT. Klik lagi untuk tetap mengonfirmasi';setTimeout(()=>{armed=false;updConf();},5000);return;}
+  const R0=analyze(read()), nc=R0.filter(r=>r.status==='CONFLICT').length, nd=R0.filter(r=>r.info.startsWith('Dokumen sumber')&&r.status==='MISSING').length;
+  if((nc||nd)&&!armed){armed=true;$('bConf').textContent='Masih ada '+[nc?nc+' CONFLICT':'',nd?nd+' dokumen sumber belum diunggah':''].filter(Boolean).join(' dan ')+'. Klik lagi untuk tetap mengonfirmasi';setTimeout(()=>{armed=false;updConf();},5000);return;}
   armed=false; S.confirmed=Date.now(); if(await save()){updConf();tab('xls');} };
 $('goVer').onclick=()=>tab('ver');
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)tab(b.dataset.go);});

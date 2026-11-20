@@ -37,6 +37,15 @@
       </div>
       <p class="sub">Klik ▾ pada kolom untuk memilih data yang pernah dipakai. Jika belum ada, ketik langsung. Isian otomatis tersimpan sebagai draf di perangkat ini.</p>
     </section>
+    <section class="card"><h2>Langkah awal: unggah dokumen sumber</h2>
+      <p class="sub">Semua data di bawah mengacu pada dokumen sumber: <b>B/L, MoU, NPWP</b>, dan dokumen lain. Unggah dulu, lalu isi data sambil membuka dokumen dengan tombol <b>Lihat</b>. Aplikasi tidak membaca isi PDF atau gambar otomatis. Lampiran tersimpan di browser perangkat ini.</p>
+      <div id="docChk" class="chips"></div>
+      <div class="row" style="margin-top:6px">
+        <select id="fType"><option>B/L</option><option>NPWP</option><option>MoU / Perjanjian Hibah</option><option>Grant Certificate</option><option>Spesifikasi Kendaraan</option><option>Lainnya</option></select>
+        <label class="fl">＋ Pilih file<input type="file" id="fFiles" accept=".pdf,.xlsx,image/*" multiple hidden></label>
+      </div>
+      <div id="files" class="files"></div>
+    </section>
     <section class="card"><h2>Data proyek</h2><div class="g" id="hdr"></div></section>
     <section class="card"><h2>Shipper dan Consignee</h2>
       <div class="g">
@@ -47,14 +56,6 @@
     <h2 class="sec">Unit kendaraan</h2>
     <div id="units"></div>
     <div class="row mb"><button class="p" id="bAdd">+ Unit</button><span class="sub nm" id="uCount"></span></div>
-    <section class="card"><h2>Unggah dokumen (B/L, NPWP, MoU, dan lainnya)</h2>
-      <p class="sub">Dokumen disimpan sebagai lampiran untuk dilihat saat verifikasi. Aplikasi tidak membaca isi PDF atau gambar secara otomatis; data tetap diisi di atas. Lampiran tersimpan di browser perangkat ini.</p>
-      <div class="row" style="margin-top:10px">
-        <select id="fType"><option>B/L</option><option>NPWP</option><option>MoU / Perjanjian Hibah</option><option>Grant Certificate</option><option>Spesifikasi Kendaraan</option><option>Lainnya</option></select>
-        <label class="fl">＋ Pilih file<input type="file" id="fFiles" accept=".pdf,.xlsx,image/*" multiple hidden></label>
-      </div>
-      <div id="files" class="files"></div>
-    </section>
     <section class="card actbar">
       <button class="p big" id="bSaveGo">💾 Simpan &amp; Lanjut ke Verifikasi</button>
       <div class="note sub"></div>
@@ -68,7 +69,7 @@
       <p class="sub">Ketik ulang data dari Bill of Lading dan MoU agar aplikasi bisa mencocokkan dengan isi form. Pencocokan dilakukan terhadap data yang Anda ketik, bukan membaca file dokumen.</p>
       <div class="g">
         <div><label>Daftar chassis menurut B/L (1 baris = 1 unit)</label><textarea id="blChassis" data-s="blChassis"></textarea></div>
-        <div><label>Data MoU: chassis dan berat, contoh <code>KMFLA18TPFC092868 10955</code></label><textarea id="mou" data-s="mou"></textarea></div>
+        <div><label>Data MoU: chassis, berat, harga (harga opsional), contoh <code>KMFLA18TPFC092868 10955 210500000</code></label><textarea id="mou" data-s="mou"></textarea></div>
       </div>
     </section>
     <section class="card"><h2>Pemeriksaan otomatis</h2><div id="checks"></div></section>

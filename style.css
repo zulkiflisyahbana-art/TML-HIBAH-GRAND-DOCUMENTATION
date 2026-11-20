@@ -70,3 +70,5 @@ button.big{padding:14px 22px;font-size:16px}
 #printHost{display:none}
 @media print{body>*:not(#printHost){display:none!important}#printHost{display:block!important}html,body{background:#fff!important}}
 @media (max-width:560px){.actbar{position:static}.seg{display:flex}.seg button{flex:1;padding:10px 8px}}
+
+.dchip{font-size:13px;font-weight:700;border-radius:999px;padding:5px 12px;border:1.5px solid}.dchip.ok{color:var(--ok);border-color:var(--ok);background:#e8f6ef}.dchip.miss{color:#8a4b08;border-color:#f0b36b;background:#fff4e5}

@@ -11,7 +11,7 @@ Alamat: `https://zulkiflisyahbana-art.github.io/TML-HIBAH-Grand-Documentation/`
 
 | Tab | Yang dilakukan |
 |---|---|
-| **1. Isi Data** | Isi data proyek, shipper/consignee, dan unit kendaraan (klik ▾ untuk memilih data lama, atau ketik baru). **Unggah dokumen** B/L, NPWP, MoU, dan lainnya. Isian tersimpan otomatis sebagai draf. Klik **💾 Simpan & Lanjut ke Verifikasi**. |
+| **1. Isi Data** | **Mulai dengan Unggah dokumen** B/L, NPWP, MoU, dan lainnya (penanda centang menunjukkan dokumen wajib yang sudah terlampir). Lalu isi data proyek, shipper/consignee, dan unit kendaraan sambil membuka dokumen lewat tombol Lihat (klik ▾ untuk memilih data lama, atau ketik baru). Isian tersimpan otomatis sebagai draf. Klik **💾 Simpan & Lanjut ke Verifikasi**. |
 | **2. Verifikasi** | Laporan verifikasi langsung tampil (VERIFIED / MISSING / CONFLICT / NEED CONFIRMATION). Klik **Edit** pada baris untuk memperbaiki datanya, atau **✏️ Edit Data**. Dokumen lampiran bisa dibuka lewat **Lihat**. Jika sudah sesuai, klik **💾 Simpan**, lalu **✅ Telah Dikonfirmasi**. |
 | **3. Excel** | Terbuka setelah dikonfirmasi. **Pratinjau** Commercial Invoice dan Packing List, lalu **Unduh Excel (.xlsx)**, **Cetak**, **Ekspor PDF**, atau **Simpan**. Mengubah data setelah konfirmasi akan mengunci tab ini lagi sampai dikonfirmasi ulang. |
 
@@ -39,7 +39,7 @@ optional-backend/     ← Code.gs untuk penyimpanan bersama (opsional)
 ### Berjalan penuh di browser (sudah diuji)
 - Pengisian template resmi TML (stempel, tanda tangan, merged cells, area cetak tetap), 1 sampai banyak unit.
 - Pratinjau, unduh `.xlsx`, cetak, dan ekspor PDF (CI di kertas Legal, PL di A4, sesuai template).
-- Droplist semua kolom, tambah/edit/hapus unit, laporan verifikasi dengan tombol Edit, konfirmasi.
+- Droplist semua kolom, tambah/edit/hapus unit, laporan verifikasi dengan tombol Edit, konfirmasi. Data MoU (chassis, berat, harga) dicocokkan per unit; harga yang sama pada beberapa unit diberi peringatan.
 - Unggah dokumen sebagai lampiran untuk dilihat (PDF, gambar) dan impor Excel CI/PL buatan aplikasi.
 - Draf otomatis, simpan proyek di perangkat, ekspor/impor `.json`.
 
