@@ -3,138 +3,112 @@
 Website mandiri (HTML + CSS + JavaScript, tanpa server) milik **PT Tri Mandiri Logistik** untuk menyiapkan
 **Commercial Invoice** dan **Packing List** pengiriman barang hibah dalam format Excel resmi TML.
 
-Target alamat: `https://zulkiflisyahbana-art.github.io/TML-HIBAH-Grand-Documentation/`
+Alamat: `https://zulkiflisyahbana-art.github.io/TML-HIBAH-Grand-Documentation/`
 
 ---
 
-## 1. Isi paket
+## 1. Alur kerja di website (3 tahap)
+
+| Tab | Yang dilakukan |
+|---|---|
+| **1. Isi Data** | Isi data proyek, shipper/consignee, dan unit kendaraan (klik ▾ untuk memilih data lama, atau ketik baru). **Unggah dokumen** B/L, NPWP, MoU, dan lainnya. Isian tersimpan otomatis sebagai draf. Klik **💾 Simpan & Lanjut ke Verifikasi**. |
+| **2. Verifikasi** | Laporan verifikasi langsung tampil (VERIFIED / MISSING / CONFLICT / NEED CONFIRMATION). Klik **Edit** pada baris untuk memperbaiki datanya, atau **✏️ Edit Data**. Dokumen lampiran bisa dibuka lewat **Lihat**. Jika sudah sesuai, klik **💾 Simpan**, lalu **✅ Telah Dikonfirmasi**. |
+| **3. Excel** | Terbuka setelah dikonfirmasi. **Pratinjau** Commercial Invoice dan Packing List, lalu **Unduh Excel (.xlsx)**, **Cetak**, **Ekspor PDF**, atau **Simpan**. Mengubah data setelah konfirmasi akan mengunci tab ini lagi sampai dikonfirmasi ulang. |
+
+## 2. Isi paket (semua berkas pendukung sejajar dengan index.html)
 
 ```
-TML-HIBAH-Grand-Documentation/
-├── index.html              ← halaman utama
-├── style.css               ← tampilan (mengikuti TML Order Hub: navy, oranye, krem; responsif)
-├── script.js               ← seluruh logika aplikasi
-├── README.md               ← panduan ini
-├── .nojekyll               ← (opsional) agar GitHub tidak memproses ulang dengan Jekyll
-├── assets/
-│   ├── logo.png            ← logo PT Tri Mandiri Logistik (dipotong bulat dari file logo)
-│   ├── favicon.png
-│   ├── templates-data.js   ← template Excel resmi TML (tertanam, base64)
-│   └── vendor/jszip.min.js ← library JSZip 3.10.1 (MIT), disalin lokal, tanpa CDN
-├── templates/
-│   ├── TML_COMMERCIAL_INVOICE_TEMPLATE.xlsx   ← salinan template (rujukan/arsip)
-│   └── TML_PACKING_LIST_TEMPLATE.xlsx
-└── optional-backend/
-    └── Code.gs             ← OPSIONAL: penyimpanan bersama via Google Apps Script
+index.html            ← halaman utama
+style.css             ← tampilan (mengikuti TML Order Hub)
+script.js             ← logika aplikasi
+preview.js            ← pratinjau Excel
+templates-data.js     ← template Excel resmi TML (tertanam)
+jszip.min.js          ← library JSZip 3.10.1
+html2canvas.min.js    ← library html2canvas 1.4.1 (untuk PDF)
+jspdf.umd.min.js      ← library jsPDF 2.5.1 (untuk PDF)
+logo.png, favicon.png ← logo PT Tri Mandiri Logistik
+README.md, .nojekyll
+templates/            ← salinan template .xlsx (arsip, tidak dipakai saat berjalan)
+optional-backend/     ← Code.gs untuk penyimpanan bersama (opsional)
 ```
 
-Semua jalur memakai **path relatif**, jadi aman di alamat berawalan nama repository (`/TML-HIBAH-Grand-Documentation/`).
+**Penting:** 11 berkas di baris atas harus berada **di level yang sama dengan `index.html`**, bukan di dalam folder. Jika ada yang tidak terunggah, website menampilkan **kotak peringatan merah** yang menyebut nama berkas yang kurang.
 
-## 2. Fitur: apa yang jalan, apa yang tidak
+## 3. Fitur: apa yang jalan, apa yang tidak
 
 ### Berjalan penuh di browser (sudah diuji)
-| Fitur | Keterangan |
-|---|---|
-| Tampilan 3 tab (Isi Data, Verifikasi, Excel) | Gaya mengikuti TML Order Hub: header navy dengan logo TML, tab bergaris oranye, kartu putih di latar krem, tombol utama oranye. |
-| Commercial Invoice dan Packing List | Mengisi template resmi TML (stempel, tanda tangan, merged cells, area cetak tetap). Jumlah unit bebas (1 sampai banyak); 3–5 unit otomatis 1 halaman. |
-| Unduh Excel | Langsung dari browser, siap dibuka dan dicetak di Excel. |
-| Droplist semua kolom | Klik ▾ untuk memilih data yang pernah dipakai, atau ketik baru. |
-| Unit: tambah, edit, hapus | Tombol **+ Unit**, **Edit**, **Hapus** (dua langkah). |
-| Pemeriksaan otomatis | VIN 17 karakter valid (tanpa I, O, Q), VIN kembar, total berat vs B/L, jumlah unit vs B/L, harga terisi. |
-| Dokumen pembanding | Ketik ulang chassis B/L dan data MoU (chassis + berat) agar dicocokkan dengan form. |
-| Laporan verifikasi | Tabel No / Informasi / Data / Status / Catatan dengan status VERIFIED, MISSING, CONFLICT, NEED CONFIRMATION. Bisa diunduh (.html) dan dicetak. |
-| Impor dari Excel | Membaca kembali file CI/PL **buatan aplikasi ini** untuk melanjutkan atau mengoreksi. |
-| Simpan proyek | Di browser perangkat ini (localStorage), plus ekspor dan impor `.json` untuk berbagi antar perangkat. |
+- Pengisian template resmi TML (stempel, tanda tangan, merged cells, area cetak tetap), 1 sampai banyak unit.
+- Pratinjau, unduh `.xlsx`, cetak, dan ekspor PDF (CI di kertas Legal, PL di A4, sesuai template).
+- Droplist semua kolom, tambah/edit/hapus unit, laporan verifikasi dengan tombol Edit, konfirmasi.
+- Unggah dokumen sebagai lampiran untuk dilihat (PDF, gambar) dan impor Excel CI/PL buatan aplikasi.
+- Draf otomatis, simpan proyek di perangkat, ekspor/impor `.json`.
 
 ### Tidak termasuk (jujur)
 | Fitur | Alasan |
 |---|---|
-| Unggah PDF lalu **ekstraksi otomatis** isi B/L, MoU, NPWP | Dokumen tersebut berupa hasil scan (gambar). Membacanya butuh OCR atau AI. Itu tetap dikerjakan di chat Claude Project; hasilnya diketik atau diimpor ke aplikasi ini. |
-| Pembacaan gambar dokumen oleh Claude | Hanya tersedia di dalam tampilan claude.ai. Di GitHub Pages butuh API berbayar dan kunci rahasia yang **tidak boleh** ditanam di JavaScript publik. |
-| Pencocokan otomatis ke file dokumen asli | Pencocokan dilakukan terhadap data yang diketik pengguna, bukan terhadap file. |
-| Nomor mesin dan dimensi di Excel | Template tidak punya kolomnya. Keduanya hanya muncul di laporan verifikasi (opsional). |
+| **Membaca isi PDF/gambar otomatis** (ekstraksi B/L, MoU, NPWP) | Dokumen berupa scan; butuh OCR atau AI. Itu tetap dikerjakan di chat Claude Project; hasilnya diketik atau diimpor. Lampiran hanya disimpan dan ditampilkan untuk dicocokkan secara visual. |
+| Fitur Claude/AI di website | Butuh API berbayar dan kunci rahasia yang tidak boleh ada di JavaScript publik. |
+| Pencocokan otomatis ke file dokumen | Pencocokan dilakukan terhadap data yang diketik pengguna. |
+| Nomor mesin dan dimensi di Excel | Template tidak punya kolomnya; keduanya hanya muncul di laporan. |
 
-### Opsional, belum diuji
-- **Penyimpanan bersama tim** lewat Google Apps Script (`optional-backend/Code.gs`), memakai pola JSONP seperti TML Order Hub. Kodenya ada dan terintegrasi, tetapi **belum diuji terhadap Google**. Uji dulu dengan 1 proyek sebelum dipakai tim.
-
-## 3. Mencoba di komputer sendiri
-Klik dua kali `index.html` (berjalan juga tanpa internet), atau jalankan `python -m http.server 8000` di folder ini lalu buka `http://localhost:8000`.
+### Catatan teknis
+- **Lampiran dokumen** disimpan di browser perangkat itu (IndexedDB), tidak ikut penyimpanan online dan tidak ikut ekspor `.json`.
+- **Pratinjau dan PDF** adalah gambar ulang template; sangat mirip, tetapi hasil cetak resmi tetap dari file `.xlsx` di Excel. PDF berupa gambar (bukan teks yang bisa dipilih). Untuk PDF teks, klik **Cetak** lalu pilih *Save as PDF*.
+- **Penyimpanan bersama tim** (Google Apps Script, folder `optional-backend`) sudah berhasil dipakai menyimpan proyek pada percobaan pengguna. Uji pembukaan dari perangkat lain sebelum dipakai tim.
 
 ## 4. Deploy ke GitHub Pages (tanpa instal apa pun)
 
-> Akun: `zulkiflisyahbana-art` · Repository: `TML-HIBAH-Grand-Documentation` (huruf persis seperti ini)
+> Akun: `zulkiflisyahbana-art` · Repository: `TML-HIBAH-Grand-Documentation` · harus **Public**
 
-**A. Buat repository**
-1. Login ke https://github.com sebagai `zulkiflisyahbana-art`.
-2. Klik **+** (kanan atas) → **New repository**.
-3. **Repository name:** `TML-HIBAH-Grand-Documentation`
-4. Pilih **Public** (GitHub Pages gratis memerlukan repository publik).
-5. **Jangan** centang "Add a README" (kita sudah punya).
-6. Klik **Create repository**.
+**A. Buat repository** (lewati jika sudah ada): GitHub → **+** → **New repository** → nama `TML-HIBAH-Grand-Documentation` → **Public** → jangan centang README → **Create repository**.
 
-**B. Unggah file**
-1. Ekstrak file ZIP di komputer. Buka foldernya hingga terlihat `index.html`, `style.css`, `script.js`, `assets`, dan seterusnya.
-2. Di halaman repository baru, klik **uploading an existing file**.
-3. Seret **seluruh isi** folder (semua file **dan** folder `assets`, `templates`, `optional-backend`) ke jendela GitHub. Jangan menyeret folder induknya, supaya `index.html` berada di akar repository.
-4. Tunggu proses unggah selesai, lalu klik **Commit changes**.
-5. Pastikan di halaman utama repository terlihat `index.html`, `style.css`, `script.js` di daftar paling atas (bukan di dalam subfolder).
+**B. Unggah (atau perbarui) file**
+1. Ekstrak ZIP. Buka foldernya sampai terlihat `index.html`.
+2. Di repository: **Add file → Upload files**.
+3. Tekan **Ctrl+A** di folder hasil ekstrak, lalu seret **semua isinya** ke GitHub (termasuk folder `templates` dan `optional-backend`).
+4. Tunggu semua file selesai, lalu **Commit changes**. File bernama sama otomatis menimpa yang lama.
+5. Buka halaman utama repository dan pastikan **11 berkas di atas terlihat langsung di daftar paling atas**.
+6. Folder `assets` dari versi lama sudah tidak dipakai. Boleh dibiarkan atau dihapus (buka folder → **⋯ → Delete directory**).
 
-**C. Aktifkan GitHub Pages**
-1. Buka tab **Settings** → menu **Pages** (kolom kiri).
-2. **Build and deployment → Source:** pilih **Deploy from a branch**.
-3. **Branch:** pilih `main` dan folder `/ (root)`, klik **Save**.
-4. Tunggu 1–3 menit. Buka tab **Actions** dan tunggu "pages build and deployment" berstatus centang hijau.
-5. Kembali ke **Settings → Pages**. Akan muncul tulisan **"Your site is live at …"**.
+**C. Aktifkan Pages** (sekali saja): **Settings → Pages → Source: Deploy from a branch → Branch `main` / `(root)` → Save**. Tunggu 1–3 menit; di tab **Actions** statusnya harus centang hijau.
 
-**D. Pastikan alamat berhasil dibuka**
-1. Buka `https://zulkiflisyahbana-art.github.io/TML-HIBAH-Grand-Documentation/` di Google Chrome.
-2. Cek berurutan: judul "TML HIBAH – GRAND DOCUMENTATION" tampil → klik **Isi contoh Party 2** → klik **Unduh Commercial Invoice** → buka file di Excel dan pastikan stempel serta tanda tangan muncul.
-3. Buka di HP; tampilan harus menyesuaikan layar.
+**D. Pastikan berhasil**
+1. Buka alamat website, lalu tekan **Ctrl+F5**.
+2. Logo TML tampil di header dan **tidak ada kotak peringatan merah**.
+3. Klik **Isi contoh Party 2** → **Simpan & Lanjut** → tabel verifikasi tampil → **Telah Dikonfirmasi** (klik dua kali bila ada CONFLICT) → pratinjau Excel tampil → coba **Unduh Excel**, **Ekspor PDF**, dan **Cetak**.
 
 **Jika bermasalah**
-| Gejala | Penyebab dan solusi |
+| Gejala | Solusi |
 |---|---|
-| Halaman 404 | Tunggu beberapa menit; pastikan Pages aktif dan `index.html` ada di akar repository; pastikan nama repository sama persis. |
-| Pages tidak bisa diaktifkan | Repository masih Private. Ubah ke Public di **Settings → General → Danger Zone**. |
-| Tampilan polos atau tombol tidak jalan | Muat ulang paksa (Ctrl+F5). Pastikan folder `assets` ikut terunggah lengkap. |
-| Unduhan tidak muncul | Cek pengaturan unduhan Chrome; coba tab baru tanpa ekstensi pemblokir. |
+| Kotak merah "Berkas pendukung belum terunggah" | Unggah berkas yang disebut ke akar repository (sejajar `index.html`), tunggu 1–3 menit, Ctrl+F5. |
+| Tampilan lama masih muncul | Ctrl+F5; GitHub Pages bisa menyimpan cache beberapa menit. |
+| Halaman 404 | Pages belum aktif, `index.html` tidak di akar repository, atau nama repository tidak sama. |
+| Pages tidak bisa diaktifkan | Repository masih Private; ubah ke Public. |
+| Unduhan/PDF tidak muncul | Cek izin unduhan di Chrome; coba tab tanpa ekstensi pemblokir. |
 
-**Memperbarui aplikasi:** di repository klik **Add file → Upload files**, unggah file yang berubah (nama sama menimpa file lama), lalu **Commit**. Situs diperbarui otomatis dalam 1–3 menit.
+## 5. Penyimpanan bersama tim (opsional)
+1. Buat Google Sheet → **Extensions → Apps Script** → tempel isi `optional-backend/Code.gs` → simpan.
+2. **Deploy → New deployment → Web app** → *Execute as:* Me, *Who has access:* Anyone → salin URL `/exec`.
+3. Di website klik ⚙, tempel URL, **Simpan pengaturan** (status berubah menjadi "Tersimpan online").
 
-**Cara baris perintah (opsional):**
-```bash
-git init && git add . && git commit -m "TML HIBAH Grand Documentation"
-git branch -M main
-git remote add origin https://github.com/zulkiflisyahbana-art/TML-HIBAH-Grand-Documentation.git
-git push -u origin main
-```
+"Anyone" berarti siapa pun yang tahu URL bisa membaca dan menulis data proyek; jangan dibagikan di luar tim. Proyek dengan sangat banyak unit bisa melewati batas panjang URL.
 
-## 5. Penyimpanan bersama tim (opsional, belum diuji)
-1. Buat Google Sheet baru. **Extensions → Apps Script**.
-2. Tempel isi `optional-backend/Code.gs`, simpan.
-3. **Deploy → New deployment → Web app**. *Execute as:* Me. *Who has access:* Anyone. Salin URL `/exec`.
-4. Di aplikasi klik **⚙ Pengaturan**, tempel URL, **Simpan pengaturan**.
-5. Simpan satu proyek uji, lalu buka dari perangkat lain.
-
-Catatan: data dikirim lewat alamat URL, jadi proyek dengan sangat banyak unit bisa melewati batas panjang URL. "Anyone" berarti siapa pun yang tahu URL itu bisa membaca dan menulis data. Jangan dibagikan di luar tim.
-
-## 6. Keamanan dan privasi (baca sebelum meng-publish)
-- **Repository publik berarti isinya terlihat siapa saja.** Template Excel memuat **gambar stempel GO&DO dan tanda tangan DAON Trading**. Siapa pun yang membuka repository dapat mengunduhnya. Pertimbangkan hal ini sebelum memilih Public, atau minta persetujuan pihak terkait.
-- Tidak ada API key, password, atau data rahasia di dalam kode.
-- Data proyek yang disimpan lokal ada di browser masing-masing dan tidak dikirim ke mana pun, kecuali Anda mengaktifkan penyimpanan bersama.
-- Situs ini bukan halaman login; siapa pun yang tahu alamatnya dapat membukanya.
+## 6. Keamanan dan privasi
+- **Repository publik terlihat siapa saja.** Template memuat **stempel GO&DO dan tanda tangan DAON Trading**; siapa pun yang membuka repository dapat mengunduhnya. Pertimbangkan sebelum memilih Public.
+- Tidak ada API key atau password di dalam kode. Data proyek lokal hanya ada di browser masing-masing kecuali penyimpanan bersama diaktifkan.
+- Situs ini bukan halaman login.
 
 ## 7. Mengganti template resmi
-Ganti file di `templates/`, lalu buat ulang `assets/templates-data.js`:
+Ganti file di `templates/`, lalu buat ulang `templates-data.js`:
 ```bash
 python3 - <<'PY'
 import base64
 ci=base64.b64encode(open('templates/TML_COMMERCIAL_INVOICE_TEMPLATE.xlsx','rb').read()).decode()
 pl=base64.b64encode(open('templates/TML_PACKING_LIST_TEMPLATE.xlsx','rb').read()).decode()
-open('assets/templates-data.js','w').write('window.TML_TEMPLATES={CI:"%s",PL:"%s"};\n'%(ci,pl))
+open('templates-data.js','w').write('window.TML_TEMPLATES={CI:"%s",PL:"%s"};\n'%(ci,pl))
 PY
 ```
-Struktur template (sel isian, 2 blok barang baris 27–40, total baris 41) harus tetap sama seperti Party 2 of 4, karena mesin pengisi mengacu ke posisi sel tersebut.
+Struktur template (sel isian, 2 blok barang baris 27–40, total baris 41) harus tetap seperti Party 2 of 4.
 
 ## 8. Lisensi pihak ketiga
-JSZip 3.10.1 — MIT/GPLv3 (https://stuk.github.io/jszip/).
+JSZip 3.10.1 (MIT/GPLv3), html2canvas 1.4.1 (MIT), jsPDF 2.5.1 (MIT).

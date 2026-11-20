@@ -112,23 +112,29 @@ const D={name:'PARTY_2_OF_4',invNo:'SWC-OCTOBER-13 2026',invDate:'Oct 13-2026',d
 shipper:['SOCIAL WELFARE CORPORATION GO AND DO','80-22, Hanyuji-gil, Poseung-eup, Pyeongtaek-si, Gyeonggi-do,','Republic of Korea','TEL : (+82) 031-683-6491 ','FAX : (+82) 031-601-6417'],
 consignee:['DIREKTORAT JENDERAL BINA ADMINISTRASI KEWILAYAHAN','DITJEN BINA ADMINISTRASI KEWILAYAHAN,KEMENTERIAN DALAM NEGERI','Medan Merdeka Utara 7,Medan Merdeka Utara ,Gambir,Gambir,','Kota ADM,Jakarta Pusat ,DKI Jakarta ,10110','Tel : +62 8122566520 +62 81313106941,+62 81284088281','Email : subditssarpras.infodamkar@gmail.com. Danang.ins@gmail.com ','vitus.nd15@gmail.com','ATTN: Danang Insita Putra, ST., M.Si(Han),Ph.d.'],
 units:[{brand:'HYUNDAI',model:'FIRE TRUCK',vin:'KMFLA18TPFC092868',year:'2015',cyl:'5,899 CC',eng:'DIESEL',color:'RED&WHITE',kg:'10810',price:'210500000'},{brand:'HYUNDAI',model:'FIRE TRUCK',vin:'KMFLA18TPFC092108',year:'2015',cyl:'5,899 CC',eng:'DIESEL',color:'RED&WHITE',kg:'10810',price:'212272000'}]};
+
 const $=id=>document.getElementById(id);
 const HF=[['name','Nama proyek (untuk nama file)'],['invNo','No. invoice'],['invDate','Tanggal invoice'],['depart','Departure date (boleh kosong)'],['vessel','Vessel (boleh kosong)'],['from','From'],['to','To'],['blTotal','Berat total di B/L (kg)'],['blQty','Jumlah unit di B/L']];
 const UF=[['brand','Brand'],['model','Model'],['vin','VIN / Chassis'],['year','Year'],['cyl','Cylinder'],['eng','Engine (jenis)'],['color','Color'],['kg','Berat (kg), net = gross'],['price','Harga satuan (₩)'],['engNo','Nomor mesin (opsional, hanya laporan)'],['dim','Dimensi P×L×T (opsional, hanya laporan)']];
 const CP='<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-let S, OPT={}, SAVED=[], UID=0;
+let S, OPT={}, SAVED=[], UID=0, PK='CI';
+const rid=()=>Math.random().toString(36).slice(2,10);
 const cfg=()=>LS.get('tml_cfg',{url:''});
+const note=t=>document.querySelectorAll('.note').forEach(e=>e.textContent=t);
 const blank=(p={})=>({id:++UID,brand:'',model:'',vin:'',year:'',cyl:'',eng:'',color:'',kg:'',price:'',engNo:'',dim:'',edit:true,...p});
 const addOpt=(k,v)=>{v=String(v??'').trim();if(v)(OPT[k]=OPT[k]||new Set()).add(v);};
 function learn(s){HF.forEach(([k])=>addOpt(k,s[k]));(s.units||[]).forEach(u=>UF.forEach(([k])=>addOpt(k,u[k])));addOpt('shipper',(s.shipper||[]).join('\n'));addOpt('consignee',(s.consignee||[]).join('\n'));}
 function persistOpts(){const o={};for(const k in OPT)o[k]=[...OPT[k]];LS.set('tml_opts',o);}
-const fresh=()=>({name:'',invNo:'',invDate:'',depart:'',vessel:'',from:D.from,to:D.to,blTotal:'',blQty:'',blChassis:'',mou:'',shipper:[...D.shipper],consignee:[...D.consignee],units:[blank()]});
-const example=()=>({...D,shipper:[...D.shipper],consignee:[...D.consignee],units:D.units.map(u=>blank({...u,edit:false}))});
+const fresh=()=>({key:rid(),confirmed:null,name:'',invNo:'',invDate:'',depart:'',vessel:'',from:D.from,to:D.to,blTotal:'',blQty:'',blChassis:'',mou:'',shipper:[...D.shipper],consignee:[...D.consignee],units:[blank()]});
+const example=()=>({...D,key:rid(),confirmed:null,shipper:[...D.shipper],consignee:[...D.consignee],units:D.units.map(u=>blank({...u,edit:false}))});
 const clean=s=>({...s,units:s.units.map(({id,edit,sure,ai,...u})=>u)});
+const hydrate=d=>{const u=(d.units||[]).map(x=>blank({...x,edit:false}));return {...fresh(),...d,key:d.key||rid(),units:u.length?u:[blank()]};};
+let dT;function draft(){clearTimeout(dT);dT=setTimeout(()=>LS.set('tml_draft',clean(read())),250);}
+function touch(){S.confirmed=null;draft();updConf();}
 const cb=(id,k,attrs,val)=>'<div class="cb"><input id="'+id+'" '+attrs+' value="'+String(val??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" autocomplete="off"><button type="button" class="dd" data-k="'+k+'" data-t="'+id+'" aria-label="Pilih">'+CP+'</button></div>';
 function hdr(){ $('hdr').innerHTML=HF.map(([k,l])=>'<div class="w"><label>'+l+'</label>'+cb('h_'+k,k,'data-h="'+k+'"','')+'</div>').join(''); }
-function render(){ HF.forEach(([k])=>$('h_'+k).value=S[k]??''); $('shipper').value=S.shipper.join('\n'); $('consignee').value=S.consignee.join('\n'); $('blChassis').value=S.blChassis||''; $('mou').value=S.mou||''; renderUnits(); }
+function render(){ HF.forEach(([k])=>$('h_'+k).value=S[k]??''); $('shipper').value=S.shipper.join('\n'); $('consignee').value=S.consignee.join('\n'); $('blChassis').value=S.blChassis||''; $('mou').value=S.mou||''; renderUnits(); renderFiles(); updConf(); }
 const sum=u=>[u.brand,u.model].filter(Boolean).join(' ')+(u.vin?' · '+u.vin:'')+(u.kg?' · '+fmt(num(u.kg))+' kg':'')+(num(u.price)?' · ₩'+fmt(num(u.price)).replace('.00',''):'');
 function renderUnits(){
   $('units').innerHTML=S.units.map((u,i)=>{
@@ -142,28 +148,29 @@ function read(){ const s=clean(S); s.shipper=s.shipper.slice(0,5); s.consignee=s
 /* ---- Pemeriksaan dan laporan verifikasi ---- */
 const VINRE=/^[A-HJ-NPR-Z0-9]{17}$/i;
 function analyze(s){
-  const R=[], A=(info,data,status,note)=>R.push({info,data,status,note:note||''});
+  const R=[], A=(info,data,status,note,go)=>R.push({info,data,status,note:note||'',go});
   const n=s.units.length, bl=num(s.blTotal), blq=num(s.blQty);
   const list=(s.blChassis||'').split('\n').map(x=>x.trim().toUpperCase()).filter(Boolean);
   const mou={}; (s.mou||'').split('\n').forEach(l=>{const m=l.match(/([A-HJ-NPR-Z0-9]{17})\D+([\d.,]+)/i); if(m)mou[m[1].toUpperCase()]=num(m[2]);});
-  A('Jumlah unit',n+' unit',!n?'MISSING':blq?(n===blq?'VERIFIED':'CONFLICT'):'NEED CONFIRMATION',blq?'B/L: '+blq+' unit':'Isi "Jumlah unit di B/L" untuk mencocokkan');
-  A('No. invoice',s.invNo||'-',s.invNo.trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan keterangan invoice di B/L');
-  A('Shipper',(s.shipper[0]||'-'),s.shipper.join('').trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan B/L');
-  A('Consignee',(s.consignee[0]||'-'),s.consignee.join('').trim()?'NEED CONFIRMATION':'MISSING','Harus sesuai B/L dan NPWP');
-  A('From / To',(s.from||'-')+' → '+(s.to||'-'),(s.from.trim()&&s.to.trim())?'NEED CONFIRMATION':'MISSING','Port of loading di B/L dapat berbeda dari template');
-  A('Departure date / Vessel',(s.depart||'-')+' / '+(s.vessel||'-'),(s.depart.trim()&&s.vessel.trim())?'NEED CONFIRMATION':'MISSING','Opsional; boleh dikosongkan sesuai keputusan TML');
+  A('Jumlah unit',n+' unit',!n?'MISSING':blq?(n===blq?'VERIFIED':'CONFLICT'):'NEED CONFIRMATION',blq?'B/L: '+blq+' unit':'Isi "Jumlah unit di B/L" untuk mencocokkan',{id:'h_blQty'});
+  A('No. invoice',s.invNo||'-',s.invNo.trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan keterangan invoice di B/L',{id:'h_invNo'});
+  A('Shipper',(s.shipper[0]||'-'),s.shipper.join('').trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan B/L',{id:'shipper'});
+  A('Consignee',(s.consignee[0]||'-'),s.consignee.join('').trim()?'NEED CONFIRMATION':'MISSING','Harus sesuai B/L dan NPWP',{id:'consignee'});
+  A('From / To',(s.from||'-')+' → '+(s.to||'-'),(s.from.trim()&&s.to.trim())?'NEED CONFIRMATION':'MISSING','Port of loading di B/L dapat berbeda dari template',{id:'h_from'});
+  A('Departure date / Vessel',(s.depart||'-')+' / '+(s.vessel||'-'),(s.depart.trim()&&s.vessel.trim())?'NEED CONFIRMATION':'MISSING','Opsional; boleh dikosongkan sesuai keputusan TML',{id:'h_depart'});
   const tw=s.units.reduce((a,u)=>a+num(u.kg),0);
-  A('Total berat',fmt(tw)+' kg',!bl?'NEED CONFIRMATION':(tw===bl?'VERIFIED':'CONFLICT'),bl?'B/L: '+fmt(bl)+' kg':'Isi berat total B/L untuk mencocokkan');
+  A('Total berat',fmt(tw)+' kg',!bl?'NEED CONFIRMATION':(tw===bl?'VERIFIED':'CONFLICT'),bl?'B/L: '+fmt(bl)+' kg':'Isi berat total B/L untuk mencocokkan',{id:'h_blTotal'});
   const seen={};
-  s.units.forEach((u,i)=>{ const L='Unit '+(i+1), v=u.vin.trim().toUpperCase(); seen[v]=(seen[v]||0)+1;
+  S.units.forEach((su,i)=>{ const u=s.units[i], L='Unit '+(i+1), v=u.vin.trim().toUpperCase(); seen[v]=(seen[v]||0)+1;
+    const G=k=>({u:su.id,k});
     let st,nt=''; if(!v){st='MISSING';} else if(!VINRE.test(v)){st='CONFLICT';nt='VIN harus 17 karakter alfanumerik tanpa I, O, Q ('+v.length+' karakter)';} else if(list.length){st=list.includes(v)?'VERIFIED':'CONFLICT';nt=list.includes(v)?'Ada di daftar chassis B/L':'Tidak ada di daftar chassis B/L';} else {st='NEED CONFIRMATION';nt='Format valid; cocokkan dengan B/L';}
-    A(L+' · Chassis / VIN',v||'-',st,nt);
-    A(L+' · Brand / Model / Year',[u.brand,u.model,u.year].filter(Boolean).join(' / ')||'-',(u.brand&&u.model&&u.year)?((/^\d{4}$/.test(String(u.year).trim())&&+u.year>=1980&&+u.year<=2027)?'NEED CONFIRMATION':'CONFLICT'):'MISSING',(u.brand&&u.model&&u.year)?'Cocokkan dengan MoU dan spesifikasi':'');
-    A(L+' · Cylinder / Engine / Color',[u.cyl,u.eng,u.color].filter(Boolean).join(' / ')||'-',(u.cyl&&u.eng&&u.color)?'NEED CONFIRMATION':'MISSING','Belum ada di B/L dan MoU; ikuti template atau spesifikasi kendaraan');
-    A(L+' · Nomor mesin',u.engNo||'-',u.engNo.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template');
-    A(L+' · Dimensi',u.dim||'-',u.dim.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template');
-    const mw=mou[v]; A(L+' · Berat',fmt(num(u.kg))+' kg',!num(u.kg)?'MISSING':(mw==null?'NEED CONFIRMATION':(mw===num(u.kg)?'VERIFIED':'CONFLICT')),mw==null?'Isi data MoU untuk mencocokkan':'MoU: '+fmt(mw)+' kg');
-    A(L+' · Harga satuan','₩'+fmt(num(u.price)).replace('.00',''),num(u.price)>0?'NEED CONFIRMATION':'MISSING','Cocokkan dengan lampiran MoU');
+    A(L+' · Chassis / VIN',v||'-',st,nt,G('vin'));
+    A(L+' · Brand / Model / Year',[u.brand,u.model,u.year].filter(Boolean).join(' / ')||'-',(u.brand&&u.model&&u.year)?((/^\d{4}$/.test(String(u.year).trim())&&+u.year>=1980&&+u.year<=2027)?'NEED CONFIRMATION':'CONFLICT'):'MISSING',(u.brand&&u.model&&u.year)?'Cocokkan dengan MoU dan spesifikasi':'',G('brand'));
+    A(L+' · Cylinder / Engine / Color',[u.cyl,u.eng,u.color].filter(Boolean).join(' / ')||'-',(u.cyl&&u.eng&&u.color)?'NEED CONFIRMATION':'MISSING','Belum ada di B/L dan MoU; ikuti template atau spesifikasi kendaraan',G('cyl'));
+    A(L+' · Nomor mesin',u.engNo||'-',u.engNo.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template',G('engNo'));
+    A(L+' · Dimensi',u.dim||'-',u.dim.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template',G('dim'));
+    const mw=mou[v]; A(L+' · Berat',fmt(num(u.kg))+' kg',!num(u.kg)?'MISSING':(mw==null?'NEED CONFIRMATION':(mw===num(u.kg)?'VERIFIED':'CONFLICT')),mw==null?'Isi data MoU untuk mencocokkan':'MoU: '+fmt(mw)+' kg',G('kg'));
+    A(L+' · Harga satuan','₩'+fmt(num(u.price)).replace('.00',''),num(u.price)>0?'NEED CONFIRMATION':'MISSING','Cocokkan dengan lampiran MoU',G('price'));
   });
   Object.keys(seen).filter(k=>k&&seen[k]>1).forEach(k=>A('VIN kembar',k,'CONFLICT','Dipakai oleh '+seen[k]+' unit'));
   list.filter(v=>!s.units.some(u=>u.vin.trim().toUpperCase()===v)).forEach(v=>A('Chassis di B/L belum ada di form',v,'CONFLICT','Tambahkan unit'));
@@ -179,34 +186,38 @@ function check(){ const s=read(), r=[], v=s.units.map(u=>u.vin.trim());
   r.push([s.units.every(u=>num(u.price)>0),'Harga satuan semua unit terisi']);
   r.push([S.shipper.length<=5&&S.consignee.length<=8,'Shipper maks. 5 baris, consignee maks. 8 baris']);
   r.push([!!s.invNo.trim(),'No. invoice terisi']);
-  $('checks').innerHTML=r.map(([ok,t])=>'<div class="chk '+(ok?'ok':'wn')+'">'+(ok?'✓ ':'⚠ ')+t+'</div>').join(''); }
-function repHTML(){ const R=analyze(read());
-  return '<thead><tr><th>No</th><th>Informasi</th><th>Data pada form</th><th>Status</th><th>Catatan</th></tr></thead><tbody>'+R.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.info)+'</td><td>'+esc(r.data)+'</td><td class="st s-'+r.status.split(' ')[0]+'">'+r.status+'</td><td>'+esc(r.note)+'</td></tr>').join('')+'</tbody>'; }
-function fname(p){ return 'TML_'+p+'_'+((S.name||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'')||'PROYEK')+'.xlsx'; }
-const msg=(t,c)=>{$('msg').textContent=t;$('msg').className=c||'';};
+  $('checks').innerHTML=r.map(([ok,t])=>'<div class="chk '+(ok?'ok':'wn')+'">'+(ok?'✓ ':'⚠ ')+t+'</div>').join(''); renderRep(); }
+const stc=s=>s.split(' ')[0];
+function repHTML(act){ const R=analyze(read());
+  return '<thead><tr><th>No</th><th>Informasi</th><th>Data pada form</th><th>Status</th><th>Catatan</th>'+(act?'<th></th>':'')+'</tr></thead><tbody>'+R.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.info)+'</td><td>'+esc(r.data)+'</td><td class="st s-'+stc(r.status)+'">'+r.status+'</td><td>'+esc(r.note)+'</td>'+(act?'<td>'+(r.go?'<button class="sm" data-edit="'+esc(JSON.stringify(r.go)).replace(/"/g,'&quot;')+'">Edit</button>':'')+'</td>':'')+'</tr>').join('')+'</tbody>'; }
+function renderRep(){ $('rep').innerHTML=repHTML(true); const R=analyze(read()),c={};R.forEach(r=>c[stc(r.status)]=(c[stc(r.status)]||0)+1);
+  $('repSum').innerHTML=['VERIFIED','NEED','CONFLICT','MISSING'].map(k=>'<span class="chip s-'+k+'">'+(k==='NEED'?'NEED CONFIRMATION':k)+': '+(c[k]||0)+'</span>').join(''); }
+function fname(p,ext){ return 'TML_'+p+'_'+((S.name||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'')||'PROYEK')+'.'+(ext||'xlsx'); }
+const KN={CI:'COMMERCIAL_INVOICE',PL:'PACKING_LIST'};
 function saveFile(name,data,type){ const b=new Blob([data],{type:type||'application/octet-stream'}), u=URL.createObjectURL(b), a=document.createElement('a'); a.href=u; a.download=name; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); }
 async function dl(kind){
-  if(!S.units.length){msg('Tambahkan minimal 1 unit.','wn');return;}
-  try{ msg('Menyiapkan file…'); const s=read(), buf=await buildXlsx(window.TML_TEMPLATES[kind],kind,s);
-    saveFile(fname(kind==='CI'?'COMMERCIAL_INVOICE':'PACKING_LIST'),buf,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); learn(s); persistOpts(); msg('Selesai. Periksa file di Excel.','ok');
-  }catch(e){ msg('Gagal: '+(e.message||e),'wn'); } }
+  if(!S.units.length){note('Tambahkan minimal 1 unit.');return;}
+  try{ note('Menyiapkan file…'); const s=read(), buf=await buildXlsx(window.TML_TEMPLATES[kind],kind,s);
+    saveFile(fname(KN[kind]),buf,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); learn(s); persistOpts(); note('Selesai: '+fname(KN[kind])+'. Periksa file di Excel.');
+  }catch(e){ note('Gagal: '+(e.message||e)); } }
 /* ---- Penyimpanan: browser (default) + Google Apps Script (opsional) ---- */
 function jsonp(params){ const url=cfg().url; return new Promise((res,rej)=>{ const cbn='tml_cb_'+Date.now()+Math.floor(Math.random()*1e4), sc=document.createElement('script');
   const done=()=>{clearTimeout(t);delete window[cbn];sc.remove();}; const t=setTimeout(()=>{done();rej(new Error('Waktu habis'));},20000);
   window[cbn]=d=>{done();res(d);}; sc.onerror=()=>{done();rej(new Error('Gagal terhubung ke Apps Script'));};
   sc.src=url+(url.includes('?')?'&':'?')+new URLSearchParams({...params,callback:cbn}); document.head.append(sc); }); }
 async function loadSaved(){ let L=Object.values(LS.get('tml_projects',{}));
-  if(cfg().url){ try{ const r=await jsonp({action:'list'}); if(r&&r.ok) L=r.items.map(x=>({id:x.id,name:x.name,updated:+x.updated,data:x.data})); }catch(e){ $('plist').textContent='Penyimpanan bersama tidak terjangkau: '+e.message+'. Menampilkan proyek di perangkat ini.'; } }
+  if(cfg().url){ try{ const r=await jsonp({action:'list'}); if(r&&r.ok) L=r.items.map(x=>({id:x.id,name:x.name,updated:+x.updated,data:x.data})); }catch(e){ note('Penyimpanan bersama tidak terjangkau: '+e.message+'. Menampilkan proyek di perangkat ini.'); } }
   SAVED=L.sort((a,b)=>b.updated-a.updated);
   SAVED.forEach(p=>{try{learn(JSON.parse(p.data));addOpt('name',p.name);}catch(e){}});
-  $('projSel').innerHTML='<option value="">— Proyek tersimpan ('+SAVED.length+') —</option>'+SAVED.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join(''); }
+  const cur=$('projSel').value;
+  $('projSel').innerHTML='<option value="">— Proyek tersimpan ('+SAVED.length+') —</option>'+SAVED.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join(''); $('projSel').value=cur; }
 const pid=n=>(n.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'proyek');
-function load(p){ const d=JSON.parse(p.data); d.units=(d.units||[]).map(u=>blank({...u,edit:false})); S={...fresh(),...d}; render(); }
-async function save(){ if(!S.name.trim()){$('plist').textContent='Isi nama proyek dulu.';return;}
+function load(p){ S=hydrate(JSON.parse(p.data)); render(); draft(); }
+async function save(){ if(!S.name.trim()){note('Isi nama proyek dulu.');goEdit({id:'h_name'});return false;}
   const d=clean(read()); learn(d); persistOpts(); const rec={id:pid(S.name),name:S.name,updated:Date.now(),data:JSON.stringify(d)};
-  const all=LS.get('tml_projects',{}); all[rec.id]=rec; LS.set('tml_projects',all); let t='Tersimpan di perangkat ini: '+S.name;
-  if(cfg().url){ try{ const r=await jsonp({action:'save',id:rec.id,name:rec.name,updated:rec.updated,data:rec.data}); t=r&&r.ok?'Tersimpan di perangkat ini dan di penyimpanan bersama: '+S.name:'Tersimpan di perangkat ini. Penyimpanan bersama menolak: '+((r&&r.error)||'tidak diketahui'); }catch(e){ t='Tersimpan di perangkat ini. Penyimpanan bersama gagal: '+e.message; } }
-  $('plist').textContent=t; await loadSaved(); $('projSel').value=rec.id; $('bDelP').hidden=false; }
+  const all=LS.get('tml_projects',{}); all[rec.id]=rec; LS.set('tml_projects',all); let t='✓ Tersimpan di perangkat ini: '+S.name;
+  if(cfg().url){ try{ const r=await jsonp({action:'save',id:rec.id,name:rec.name,updated:rec.updated,data:rec.data}); t=r&&r.ok?'✓ Tersimpan di perangkat ini dan di penyimpanan bersama: '+S.name:'Tersimpan di perangkat ini. Penyimpanan bersama menolak: '+((r&&r.error)||'tidak diketahui'); }catch(e){ t='Tersimpan di perangkat ini. Penyimpanan bersama gagal: '+e.message; } }
+  note(t); draft(); await loadSaved(); $('projSel').value=rec.id; $('bDelP').hidden=false; return true; }
 /* ---- Impor ---- */
 async function importBuf(buf){ const sh=parseSheet(await readXlsx(buf)); let added=0,upd=0;
   ['invNo','invDate','depart','vessel','from','to'].forEach(k=>{if(sh[k]!==undefined&&sh[k]!=='')S[k]=sh[k];});
@@ -214,7 +225,24 @@ async function importBuf(buf){ const sh=parseSheet(await readXlsx(buf)); let add
   sh.units.forEach(x=>{ let u=S.units.find(y=>y.vin.trim()&&y.vin.trim()===x.vin.trim());
     if(!u){ const e=S.units.length===1&&!S.units[0].vin.trim()&&!S.units[0].brand.trim(); if(e){u=S.units[0];} else {u=blank();S.units.push(u);} u.edit=false; added++; } else upd++;
     Object.keys(x).forEach(k=>{if(x[k]!==''&&x[k]!=='0')u[k]=x[k];}); });
-  render(); return {kind:sh.kind,added,upd}; }
+  render(); touch(); return {kind:sh.kind,added,upd}; }
+/* ---- Lampiran dokumen (disimpan di browser perangkat ini lewat IndexedDB) ---- */
+const IDB={db:null,open(){return this.db?Promise.resolve(this.db):new Promise((res,rej)=>{if(!window.indexedDB)return rej(new Error('IndexedDB tidak tersedia'));const r=indexedDB.open('tml_hibah',1);r.onupgradeneeded=()=>r.result.createObjectStore('files',{keyPath:'id',autoIncrement:true}).createIndex('pid','pid');r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>rej(r.error);});},
+  async tx(mode,fn){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('files',mode),q=fn(t.objectStore('files'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);});},
+  add(r){return this.tx('readwrite',s=>s.add(r));},list(p){return this.tx('readonly',s=>s.index('pid').getAll(p));},get(i){return this.tx('readonly',s=>s.get(i));},del(i){return this.tx('readwrite',s=>s.delete(i));}};
+const kb=n=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+async function renderFiles(){ let L=[]; try{L=await IDB.list(S.key)||[];}catch(e){}
+  const h=L.length?L.map(f=>'<div class="fr"><span><b>'+esc(f.type)+'</b> · '+esc(f.name)+' <i>'+kb(f.size)+'</i></span><span class="row"><button class="sm" data-f="view" data-id="'+f.id+'">Lihat</button>'+(/\.xlsx$/i.test(f.name)?'<button class="sm" data-f="imp" data-id="'+f.id+'">Impor ke form</button>':'')+'<button class="sm d" data-f="del" data-id="'+f.id+'">Hapus</button></span></div>').join(''):'<div class="sub">Belum ada lampiran.</div>';
+  $('files').innerHTML=h; $('filesV').innerHTML=h; }
+let viewURL=null;
+async function viewFile(id){ const f=await IDB.get(id); if(!f)return; if(viewURL)URL.revokeObjectURL(viewURL); viewURL=URL.createObjectURL(f.blob);
+  const pdf=/pdf/i.test(f.mime)||/\.pdf$/i.test(f.name), img=/^image\//.test(f.mime);
+  $('vTitle').textContent=f.type+' · '+f.name; $('vBody').innerHTML=pdf?'<iframe src="'+viewURL+'" title="Dokumen"></iframe>':img?'<img src="'+viewURL+'" alt="Dokumen">':'<p class="sub">Format ini tidak bisa ditampilkan di sini.</p>';
+  $('vOpen').href=viewURL; $('vOpen').download=f.name; $('viewer').hidden=false; }
+$('fFiles').onchange=async e=>{ const fs=[...e.target.files]; e.target.value=''; let ok=0;
+  for(const f of fs){ try{ await IDB.add({pid:S.key,type:$('fType').value,name:f.name,size:f.size,mime:f.type,blob:f,added:Date.now()}); ok++; }catch(x){ note('Gagal menyimpan lampiran: '+(x.message||x)); } }
+  if(ok)note(ok+' lampiran ditambahkan. Lampiran tersimpan di browser perangkat ini dan tidak ikut penyimpanan online.'); renderFiles(); };
+$('vClose').onclick=()=>{$('viewer').hidden=true;$('vBody').innerHTML='';};
 /* ---- Menu ▾ dan event ---- */
 function closeMenus(){document.querySelectorAll('.menu').forEach(m=>m.remove());}
 function openMenu(btn){ closeMenus(); const k=btn.dataset.k, tgt=$(btn.dataset.t), w=btn.closest('.w'); const L=[...(OPT[k]||[])].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
@@ -222,41 +250,80 @@ function openMenu(btn){ closeMenus(); const k=btn.dataset.k, tgt=$(btn.dataset.t
   if(!L.length){const e=document.createElement('div');e.className='em';e.textContent='Belum ada pilihan, ketik saja.';m.append(e);}
   L.forEach(v=>{const d=document.createElement('div');d.textContent=v.replace(/\n/g,' ⏎ ');d.title=v;d.onclick=()=>{tgt.value=v;tgt.dispatchEvent(new Event('input',{bubbles:true}));closeMenus();};m.append(d);});
   w.append(m); }
-document.addEventListener('click',e=>{
+function goEdit(g){ tab('isi'); let id=g.id; if(g.u){const u=S.units.find(x=>x.id===g.u); if(u){u.edit=true;renderUnits();} id='u'+g.u+g.k;}
+  setTimeout(()=>{const el=$(id); if(el){el.scrollIntoView({block:'center',behavior:'smooth'});el.focus({preventScroll:true});}},60); }
+document.addEventListener('click',async e=>{
   const b=e.target.closest('button'); if(!b){ if(!e.target.closest('.menu'))closeMenus(); return; }
   if(b.dataset.t){ e.stopPropagation(); openMenu(b); return; }
-  closeMenus(); const a=b.dataset.a; if(!a)return; const u=S.units.find(x=>x.id===+b.dataset.id); if(!u)return;
+  closeMenus();
+  if(b.dataset.edit){ goEdit(JSON.parse(b.dataset.edit)); return; }
+  if(b.dataset.f){ const id=+b.dataset.id;
+    if(b.dataset.f==='view')viewFile(id);
+    else if(b.dataset.f==='imp'){ const f=await IDB.get(id); try{const r=await importBuf(await f.blob.arrayBuffer());note('Impor '+(r.kind==='CI'?'Commercial Invoice':'Packing List')+': '+r.added+' unit baru, '+r.upd+' diperbarui. Periksa data di tab Isi Data.');}catch(x){note('Gagal membaca Excel: '+x.message);} }
+    else if(b.dataset.f==='del'){ if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Yakin hapus?';setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='Hapus';}},3000);} else {await IDB.del(id);renderFiles();} }
+    return; }
+  const a=b.dataset.a; if(!a)return; const u=S.units.find(x=>x.id===+b.dataset.id); if(!u)return;
   if(a==='edit'){u.edit=true;renderUnits();} else if(a==='done'){u.edit=false;renderUnits();}
-  else if(a==='del'){ if(u.sure){S.units=S.units.filter(x=>x!==u);renderUnits();} else {u.sure=true;renderUnits();setTimeout(()=>{if(S.units.includes(u)&&u.sure){u.sure=false;renderUnits();}},3000);} } });
-document.addEventListener('input',e=>{ const t=e.target;
-  if(t.dataset.h)S[t.dataset.h]=t.value; else if(t.dataset.u){const u=S.units.find(x=>x.id===+t.dataset.u);u[t.dataset.k]=t.value;if(u.ai)delete u.ai[t.dataset.k];}
-  else if(t.dataset.ml)S[t.dataset.ml]=t.value.split('\n'); else if(t.dataset.s)S[t.dataset.s]=t.value;
-  t.classList.remove('ai'); check(); });
-$('bAdd').onclick=()=>{S.units.forEach(u=>u.edit=false);const p=S.units[S.units.length-1]||{};S.units.push(blank({brand:p.brand||'',model:p.model||'',year:p.year||'',cyl:p.cyl||'',eng:p.eng||'',color:p.color||'',kg:p.kg||''}));renderUnits();};
+  else if(a==='del'){ if(u.sure){S.units=S.units.filter(x=>x!==u);renderUnits();touch();} else {u.sure=true;renderUnits();setTimeout(()=>{if(S.units.includes(u)&&u.sure){u.sure=false;renderUnits();}},3000);} } });
+document.addEventListener('input',e=>{ const t=e.target, d=t.dataset; if(!(d.h||d.u||d.ml||d.s))return;
+  if(d.h)S[d.h]=t.value; else if(d.u){const u=S.units.find(x=>x.id===+d.u);u[d.k]=t.value;if(u.ai)delete u.ai[d.k];}
+  else if(d.ml)S[d.ml]=t.value.split('\n'); else if(d.s)S[d.s]=t.value;
+  t.classList.remove('ai'); check(); touch(); });
+$('bAdd').onclick=()=>{S.units.forEach(u=>u.edit=false);const p=S.units[S.units.length-1]||{};S.units.push(blank({brand:p.brand||'',model:p.model||'',year:p.year||'',cyl:p.cyl||'',eng:p.eng||'',color:p.color||'',kg:p.kg||''}));renderUnits();touch();};
 $('projSel').onchange=e=>{const p=SAVED.find(x=>x.id===e.target.value);$('bDelP').hidden=!p;if(p)load(p);};
-$('bNew').onclick=()=>{S=fresh();$('projSel').value='';$('bDelP').hidden=true;render();};
-$('bEx').onclick=()=>{S=example();render();};
+$('bNew').onclick=()=>{S=fresh();$('projSel').value='';$('bDelP').hidden=true;render();draft();note('');};
+$('bEx').onclick=()=>{S=example();render();draft();};
 let sureP=false;
 $('bDelP').onclick=async()=>{ if(!sureP){sureP=true;$('bDelP').textContent='Yakin hapus proyek ini?';setTimeout(()=>{sureP=false;$('bDelP').textContent='Hapus proyek tersimpan';},3000);return;}
   sureP=false;$('bDelP').textContent='Hapus proyek tersimpan'; const id=$('projSel').value; if(!id)return;
   const all=LS.get('tml_projects',{}); delete all[id]; LS.set('tml_projects',all); let t='Proyek dihapus dari perangkat ini.';
   if(cfg().url){try{const r=await jsonp({action:'delete',id});t=r&&r.ok?'Proyek dihapus dari perangkat ini dan penyimpanan bersama.':'Dihapus di perangkat ini; penyimpanan bersama menolak.';}catch(e){t='Dihapus di perangkat ini; penyimpanan bersama gagal: '+e.message;}}
-  $('plist').textContent=t; await loadSaved(); $('bDelP').hidden=true; };
-$('bSave').onclick=save; $('bCI').onclick=()=>dl('CI'); $('bPL').onclick=()=>dl('PL');
-$('bRep').onclick=()=>{$('rep').innerHTML=repHTML();$('repCard').hidden=false;$('repCard').scrollIntoView({behavior:'smooth'});};
-$('bRepPr').onclick=()=>window.print();
-$('bRepDl').onclick=()=>{ const html='<!doctype html><meta charset="utf-8"><title>Laporan Verifikasi</title><style>body{font:14px Arial;margin:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eee}</style><h2>Laporan Verifikasi – '+esc(S.name||'Proyek')+'</h2><p>PT Tri Mandiri Logistik · dibuat '+new Date().toLocaleString('id-ID')+'. Status dihitung dari data yang diinput, bukan pencocokan otomatis ke dokumen asli.</p><table>'+repHTML()+'</table>'; saveFile('TML_LAPORAN_VERIFIKASI_'+((S.name||'PROYEK').toUpperCase().replace(/[^A-Z0-9]+/g,'_'))+'.html',html,'text/html'); };
-$('bExp').onclick=()=>saveFile('TML_PROYEK_'+((S.name||'PROYEK').toUpperCase().replace(/[^A-Z0-9]+/g,'_'))+'.json',JSON.stringify(clean(read()),null,1),'application/json');
-$('fJson').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f)return; try{ const d=JSON.parse(await f.text()); if(!Array.isArray(d.units))throw new Error('Format bukan proyek TML'); d.units=d.units.map(u=>blank({...u,edit:false})); S={...fresh(),...d}; render(); $('plist').textContent='Proyek diimpor: '+(S.name||'(tanpa nama)'); }catch(x){ $('plist').textContent='Gagal impor: '+x.message; } };
-$('fXls').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f)return; try{ const r=await importBuf(await f.arrayBuffer()); $('plist').textContent='Impor '+(r.kind==='CI'?'Commercial Invoice':'Packing List')+' selesai: '+r.added+' unit baru, '+r.upd+' unit diperbarui. Periksa data sebelum diunduh.'; }catch(x){ $('plist').textContent='Gagal membaca Excel: '+x.message+' (hanya file CI/PL buatan aplikasi ini).'; } };
-$('bCfg').onclick=()=>{$('cfg').hidden=!$('cfg').hidden;$('cfgUrl').value=cfg().url||'';};
-$('bCfgSave').onclick=async()=>{ LS.set('tml_cfg',{url:$('cfgUrl').value.trim()}); $('cfgMsg').textContent=cfg().url?'Tersimpan. Memuat daftar proyek bersama…':'Penyimpanan bersama dimatikan.'; pill(); await loadSaved(); };
-/* ---- Tab dan status penyimpanan ---- */
-function tab(n){document.querySelectorAll('.tab').forEach(t=>t.hidden=t.dataset.tab!==n);document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===n));window.scrollTo(0,0);}
+  note(t); await loadSaved(); $('bDelP').hidden=true; };
+/* ---- Tahap 1 -> 2 -> 3 ---- */
+function tab(n){ document.querySelectorAll('.tab').forEach(t=>t.hidden=t.dataset.tab!==n); document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===n)); window.scrollTo(0,0);
+  if(n==='ver'){renderRep();renderFiles();} if(n==='isi')renderFiles(); updConf(); if(n==='xls'&&S.confirmed)showPreview(); }
+function updConf(){ const c=S&&S.confirmed; $('confBadge').className='badge '+(c?'okb':'wnb'); $('confBadge').textContent=c?'✅ Telah dikonfirmasi · '+new Date(c).toLocaleString('id-ID'):'⚠ Belum dikonfirmasi — periksa data lalu klik "Telah Dikonfirmasi"';
+  $('xlsLock').hidden=!!c; $('xlsBody').hidden=!c; $('bConf').textContent=c?'✅ Telah Dikonfirmasi':'✅ Telah Dikonfirmasi'; }
+let armed=false;
+$('bSaveGo').onclick=async()=>{ if(await save()){ tab('ver'); } };
+$('bEdit').onclick=()=>tab('isi');
+$('bSaveV').onclick=()=>save();
+$('bConf').onclick=async()=>{ if(!S.units.length){note('Tambahkan minimal 1 unit.');return;} if(!S.name.trim()){note('Isi nama proyek dulu.');goEdit({id:'h_name'});return;}
+  const nc=analyze(read()).filter(r=>r.status==='CONFLICT').length;
+  if(nc&&!armed){armed=true;$('bConf').textContent='Masih ada '+nc+' CONFLICT. Klik lagi untuk tetap mengonfirmasi';setTimeout(()=>{armed=false;updConf();},5000);return;}
+  armed=false; S.confirmed=Date.now(); if(await save()){updConf();tab('xls');} };
+$('goVer').onclick=()=>tab('ver');
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)tab(b.dataset.go);});
+/* ---- Tahap 3: pratinjau, unduh, cetak, PDF ---- */
+async function showPreview(kind){ if(kind)PK=kind; $('swCI').classList.toggle('on',PK==='CI'); $('swPL').classList.toggle('on',PK==='PL');
+  try{ $('prev').innerHTML='<p class="sub">Menyiapkan pratinjau…</p>'; const buf=await buildXlsx(window.TML_TEMPLATES[PK],PK,read()), res=await renderSheet(buf); window.PREV=res; mountPreview(); note(''); }
+  catch(e){ $('prev').innerHTML=''; note('Pratinjau gagal: '+(e.message||e)); } }
+function mountPreview(){ if(!window.PREV)return; const host=$('prev'); host.innerHTML=''; const pg=pageEl(window.PREV), sc=Math.min(1,(host.clientWidth-4)/pg.pw), box=document.createElement('div');
+  box.className='pvbox'; box.style.cssText='width:'+pg.pw*sc+'px;height:'+pg.ph*sc+'px'; pg.el.style.transformOrigin='0 0'; pg.el.style.transform='scale('+sc+')'; box.append(pg.el); host.append(box); }
+let rT; window.addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(mountPreview,150);});
+function printEl(el,css){ let h=$('printHost'); if(!h){h=document.createElement('div');h.id='printHost';document.body.append(h);} h.innerHTML='';h.append(el);
+  let st=$('pgStyle'); if(!st){st=document.createElement('style');st.id='pgStyle';document.head.append(st);} st.textContent=css;
+  const done=()=>{h.innerHTML='';window.removeEventListener('afterprint',done);}; window.addEventListener('afterprint',done); window.print(); }
+async function printDoc(){ if(!window.PREV)await showPreview(); const pg=pageEl(window.PREV); printEl(pg.el,'@page{size:'+pg.wmm+'mm '+pg.hmm+'mm;margin:0}'); }
+async function pdfDoc(){ try{ if(!window.PREV)await showPreview(); note('Membuat PDF…'); const pg=pageEl(window.PREV), h=document.createElement('div');
+    h.style.cssText='position:fixed;left:0;top:0;z-index:-9999;pointer-events:none'; h.append(pg.el); document.body.append(h);
+    try{ const cv=await html2canvas(pg.el,{scale:2,backgroundColor:'#ffffff',logging:false}); const pdf=new jspdf.jsPDF({unit:'mm',format:[pg.wmm,pg.hmm],orientation:'portrait'});
+      pdf.addImage(cv.toDataURL('image/jpeg',0.92),'JPEG',0,0,pg.wmm,pg.hmm); saveFile(fname(KN[PK],'pdf'),pdf.output('blob'),'application/pdf'); note('✓ PDF dibuat: '+fname(KN[PK],'pdf')); }
+    finally{ h.remove(); } }catch(e){ note('Ekspor PDF gagal: '+(e.message||e)); } }
+$('swCI').onclick=()=>showPreview('CI'); $('swPL').onclick=()=>showPreview('PL');
+$('bXlsx').onclick=()=>dl(PK); $('bBoth').onclick=async()=>{await dl('CI');setTimeout(()=>dl('PL'),600);};
+$('bPrint').onclick=printDoc; $('bPdf').onclick=pdfDoc; $('bSaveX').onclick=()=>save();
+$('bRepDl').onclick=()=>{ const html='<!doctype html><meta charset="utf-8"><title>Laporan Verifikasi</title><style>body{font:14px Arial;margin:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eee}</style><h2>Laporan Verifikasi – '+esc(S.name||'Proyek')+'</h2><p>PT Tri Mandiri Logistik · dibuat '+new Date().toLocaleString('id-ID')+'. Status dihitung dari data yang diinput, bukan pencocokan otomatis ke dokumen asli.</p><table>'+repHTML(false)+'</table>'; saveFile(fname('LAPORAN_VERIFIKASI','html'),html,'text/html'); };
+$('bRepPr').onclick=()=>{ const d=document.createElement('div'); d.className='rptp'; d.innerHTML='<h2>Laporan Verifikasi – '+esc(S.name||'Proyek')+'</h2><p>PT Tri Mandiri Logistik · '+new Date().toLocaleString('id-ID')+'</p><table>'+repHTML(false)+'</table>'; printEl(d,'@page{size:A4;margin:10mm}'); };
+$('bExp').onclick=()=>saveFile(fname('PROYEK','json'),JSON.stringify(clean(read()),null,1),'application/json');
+$('fJson').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f)return; try{ const d=JSON.parse(await f.text()); if(!Array.isArray(d.units))throw new Error('Format bukan proyek TML'); S=hydrate({...d,key:rid(),confirmed:null}); render(); draft(); note('Proyek diimpor: '+(S.name||'(tanpa nama)')); }catch(x){ note('Gagal impor: '+x.message); } };
+$('fXls').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f)return; try{ const r=await importBuf(await f.arrayBuffer()); note('Impor '+(r.kind==='CI'?'Commercial Invoice':'Packing List')+' selesai: '+r.added+' unit baru, '+r.upd+' diperbarui. Periksa data di tab Isi Data.'); }catch(x){ note('Gagal membaca Excel: '+x.message+' (hanya file CI/PL buatan aplikasi ini).'); } };
+$('bCfg').onclick=()=>{$('cfg').hidden=!$('cfg').hidden;$('cfgUrl').value=cfg().url||'';};
 function pill(){$('pillT').textContent=cfg().url?'Tersimpan online':'Disimpan di perangkat';}
-/* ---- Init ---- */
+$('bCfgSave').onclick=async()=>{ LS.set('tml_cfg',{url:$('cfgUrl').value.trim()}); $('cfgMsg').textContent=cfg().url?'Tersimpan. Memuat daftar proyek bersama…':'Penyimpanan bersama dimatikan.'; pill(); await loadSaved(); };
+/* ---- Init + pemeriksaan berkas pendukung ---- */
+(function(){ const need=[['JSZip','jszip.min.js'],['TML_TEMPLATES','templates-data.js'],['html2canvas','html2canvas.min.js'],['jspdf','jspdf.umd.min.js'],['renderSheet','preview.js']].filter(([g])=>typeof window[g]==='undefined'&&!(g==='renderSheet'&&typeof renderSheet==='function'));
+  if(need.length){ $('warn').hidden=false; $('warn').innerHTML='<b>Berkas pendukung belum terunggah ke repository:</b> '+need.map(n=>'<code>'+n[1]+'</code>').join(', ')+'. Unggah file tersebut ke repository <b>di level yang sama dengan index.html</b> (bukan di dalam folder), tunggu 1–3 menit, lalu muat ulang dengan Ctrl+F5.'; } })();
 ['brand','model','year','cyl','eng','color','kg','price','vin','from','to','vessel','invNo','invDate','depart','blTotal','blQty','name','engNo','dim','shipper','consignee'].forEach(k=>OPT[k]=new Set());
 learn(D); addOpt('name',D.name); for(const [k,v] of Object.entries(LS.get('tml_opts',{}))) v.forEach(x=>addOpt(k,x));
-hdr(); S=fresh(); render(); pill(); loadSaved();
-if(typeof module!=='undefined') module.exports={buildXlsx,readXlsx,parseSheet,analyze};
+hdr(); const dr=LS.get('tml_draft',null); S=dr&&dr.units?hydrate(dr):fresh(); render(); pill(); loadSaved(); tab('isi');
