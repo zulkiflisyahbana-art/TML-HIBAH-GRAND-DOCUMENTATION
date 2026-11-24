@@ -1,0 +1,1 @@
+/* Tidak dipakai pada MODE TERBUKA. */

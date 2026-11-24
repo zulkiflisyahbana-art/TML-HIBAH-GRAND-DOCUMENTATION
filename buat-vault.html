@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pembuat Vault – TML HIBAH</title>
+<style>
+body{margin:0;background:#f3f0e9;color:#1a2737;font:16px/1.5 system-ui,Segoe UI,Arial,sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px}h1{font-size:22px;margin:0 0 6px}.sub{color:#70777f;font-size:14px}
+.card{background:#fff;border:1px solid #e2e1dc;border-radius:16px;padding:18px;margin:14px 0}
+label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#70777f;margin:12px 0 5px}
+input,textarea{width:100%;padding:12px;border:1.5px solid #e2e1dc;border-radius:12px;background:#fcfbf7;font:inherit}
+button{font:inherit;font-weight:700;padding:12px 18px;border-radius:12px;border:2px solid #11304c;background:#fff;color:#11304c;cursor:pointer}
+button.p{background:#d97b3e;border-color:#d97b3e;color:#fff}.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+#msg{margin-top:12px;font-size:14px}.ok{color:#319c70}.bad{color:#c0392b}code{background:#fcfbf7;border:1px solid #e2e1dc;border-radius:6px;padding:1px 6px}
+</style></head><body><main>
+<h1>🔐 Pembuat Vault – TML HIBAH</h1>
+<p class="sub">Alat ini berjalan <b>sepenuhnya di browser Anda</b>; file dan kode akses tidak dikirim ke mana pun. Hasilnya <code>vault.enc.js</code> yang aman diunggah ke repository publik, karena isinya terenkripsi AES-256.</p>
+<div class="card">
+  <label>1. Template Commercial Invoice resmi (.xlsx, dengan stempel dan tanda tangan)</label><input type="file" id="fCI" accept=".xlsx">
+  <label>2. Template Packing List resmi (.xlsx)</label><input type="file" id="fPL" accept=".xlsx">
+  <label>3. Data contoh/bawaan (.json, opsional)</label><input type="file" id="fD" accept=".json">
+  <label>4. Kode akses tim</label><input type="text" id="pass" placeholder="minimal 16 karakter" autocomplete="off">
+  <div class="row"><button id="bGen">Buat kode acak yang kuat</button></div>
+  <p class="sub">Simpan kode ini di pengelola kata sandi dan bagikan hanya lewat saluran pribadi. <b>Kode yang hilang tidak bisa dipulihkan.</b> Gunakan kode panjang dan acak, karena berkas vault bisa diunduh siapa saja dan ditebak secara offline.</p>
+  <div class="row"><button class="p" id="bGo">Buat vault.enc.js</button></div>
+  <div id="msg"></div>
+</div>
+<script>
+const $=i=>document.getElementById(i), b64=b=>{let s='';const a=new Uint8Array(b);for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000));return btoa(s);};
+$('bGen').onclick=()=>{const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint8Array(20));$('pass').value=[0,1,2,3,4].map(g=>Array.from(r.slice(g*4,g*4+4),x=>A[x%32]).join('')).join('-');};
+$('bGo').onclick=async()=>{ const m=$('msg'); m.className=''; try{
+  const ci=$('fCI').files[0], pl=$('fPL').files[0], dj=$('fD').files[0], pass=$('pass').value;
+  if(!ci||!pl)throw new Error('Pilih kedua template Excel.'); if(pass.length<16)throw new Error('Kode akses minimal 16 karakter.');
+  m.textContent='Mengenkripsi…'; const D=dj?JSON.parse(await dj.text()):{};
+  const plain=JSON.stringify({v:1,CI:b64(await ci.arrayBuffer()),PL:b64(await pl.arrayBuffer()),D});
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12)), iter=600000;
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt']);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(plain));
+  const js='/* Vault terenkripsi (AES-256-GCM). Tidak dapat dibaca tanpa kode akses. */\nwindow.TML_VAULT={v:1,iter:'+iter+',salt:"'+b64(salt)+'",iv:"'+b64(iv)+'",ct:"'+b64(ct)+'"};\n';
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([js],{type:'text/javascript'})); a.download='vault.enc.js'; document.body.append(a); a.click(); a.remove();
+  m.className='ok'; m.textContent='✓ vault.enc.js dibuat. Unggah ke repository (menimpa yang lama), lalu bagikan kode akses yang baru ke tim.';
+ }catch(e){ m.className='bad'; m.textContent='Gagal: '+(e.message||e); } };
+</script></main></body></html>
