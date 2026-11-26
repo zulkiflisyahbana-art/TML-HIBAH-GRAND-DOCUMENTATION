@@ -19,9 +19,22 @@ Alamat: `https://zulkiflisyahbana-art.github.io/TML-HIBAH-Grand-Documentation/`
 - Setiap perubahan data otomatis **membatalkan konfirmasi** dan mengembalikan tombol ke warna semula.
 - Kartu unit menampilkan **✓ Lengkap / ⚠ Belum lengkap / ✎ Sedang diedit**; tombol **Edit** pada laporan menyorot kolom yang dituju.
 
+### Baca dokumen otomatis (tab 1)
+Setelah B/L, MoU, dan/atau NPWP diunggah, klik **🔍 Baca dokumen otomatis** (±30 detik). Aplikasi membaca dokumen **di browser Anda** (tidak ada yang dikirim ke server), menampilkan **hasil bacaan beserta sumbernya** untuk ditinjau, lalu **✔ Isi ke Data Proyek & Unit** mengisi form (bisa diedit). Kolom **kuning** = dari dokumen, **biru** = dari template contoh (cylinder/engine/color tidak ada di dokumen). Laporan verifikasi memuat kolom **Sumber dokumen** dan pemeriksaan silang (NPWP B/L ↔ kartu NPWP, chassis B/L ↔ MoU).
+
+| Dokumen | Cara baca | Keandalan |
+|---|---|---|
+| **B/L** (PDF dengan teks) | Teks asli PDF | Tinggi. Diuji pada format Heung-A Line; format pelayaran lain perlu dicek. |
+| **MoU** (scan) | OCR | Sedang: nomor, tanggal, chassis, merk, tahun, jarak tempuh terbaca; total unit dan total nilai terbaca. |
+| **Tabel lampiran MoU** (harga, berat, dimensi) | OCR | **Rendah pada scan kecil.** Angka hanya diisi otomatis bila lolos cek jumlah total; jika tidak, dibiarkan kosong dan diisi manual sambil membuka MoU (tombol Lihat). |
+| **Kartu NPWP** | OCR | Sedang: nomor dan nama terbaca. |
+
+Aturan keselamatan: nomor chassis hanya dikoreksi bila selisih **1 karakter** dan tidak menimpa kecocokan persis. Berat per unit = total B/L ÷ jumlah unit (aturan TML). Departure date dan vessel tidak diisi otomatis (keputusan TML sebelumnya) kecuali dicentang. **Selalu periksa hasil dengan dokumen asli.**
+
 ## 2. Isi paket (semua berkas sejajar dengan index.html)
 ```
-index.html  style.css  script.js  preview.js
+index.html  style.css  script.js  preview.js  baca.js
+baca/                 ← pembaca PDF + OCR (7 berkas, ±12 MB). UNGGAH FOLDER INI JUGA
 templates-data.js     ← template resmi + stempel + data contoh (TIDAK terenkripsi)
 vault.enc.js          ← kosong pada mode ini
 buat-vault.html       ← alat membuat vault terenkripsi (untuk beralih ke MODE RAHASIA)
@@ -37,7 +50,8 @@ Unggah `vault.enc.js` dan `templates-data.js` dari paket **MODE RAHASIA** (menim
 1. **Menimpa versi yang sedang berjalan:** buka repository → **Add file → Upload files** → ekstrak ZIP, **Ctrl+A** lalu seret **semua isi folder** (bukan folder induknya) → **Commit changes**. File bernama sama otomatis menimpa.
 2. Pastikan semua berkas di bagian 2 terlihat di daftar paling atas repository (bukan dalam subfolder). Folder `assets` dan `templates` dari versi lama tidak dipakai lagi dan boleh dihapus.
 3. Tunggu 1–3 menit (tab **Actions** hijau), buka alamat website, tekan **Ctrl+F5**.
-4. Jika ada berkas yang kurang, website menampilkan kotak peringatan merah yang menyebut namanya.
+4. Jika ada berkas yang kurang, website menampilkan kotak peringatan merah yang menyebut namanya. Folder **`baca`** harus ikut terunggah (berisi 7 berkas); tanpa folder itu aplikasi tetap jalan, hanya tombol Baca dokumen otomatis yang tidak aktif.
+5. Pembaca dokumen butuh alamat https (GitHub Pages) atau `localhost`; tidak jalan jika `index.html` dibuka langsung dari folder komputer.
 
 ## 5. Arsip proyek ("folder khusus TML HIBAH")
 Struktur: `TML HIBAH / tahun / NAMA_PROYEK /` berisi `01_Dokumen_Sumber`, `02_Excel`, `03_PDF`, `04_Laporan_Verifikasi`, `data-proyek.json`, `jejak-aktivitas.txt`, `00_RINGKASAN.txt`.
@@ -54,7 +68,7 @@ Struktur: `TML HIBAH / tahun / NAMA_PROYEK /` berisi `01_Dokumen_Sumber`, `02_Ex
 Tanpa `ACCESS_CODE`, siapa pun yang tahu URL bisa menulis ke Sheet/Drive Anda.
 
 ## 7. Fitur yang TIDAK ada
-- Membaca isi PDF/gambar otomatis (butuh OCR atau AI berbayar). Data tetap diisi dari dokumen.
+- Pembacaan yang selalu akurat: tabel lampiran MoU pada scan kecil tidak terbaca andal (harga, berat, dimensi diisi manual). OCR dapat salah baca; hasil selalu ditinjau operator.
 - Login per orang dan peran (Operator/Approver). Perlu backend berotentikasi, bukan hosting statis gratis.
 - Nama operator di jejak aktivitas diketik sendiri (belum terotentikasi).
 

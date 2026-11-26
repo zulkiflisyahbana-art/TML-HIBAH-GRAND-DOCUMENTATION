@@ -93,3 +93,8 @@ button:not(.p):not(.done).busy::after{border-color:rgba(17,48,76,.25);border-top
 .sstate{font-size:13px;font-weight:700;margin-top:8px}.sstate.ok{color:var(--ok)}.sstate.wn{color:#b45309}
 tr.r-CONFLICT td{background:#fdf1ef}tr.r-VERIFIED td{background:#f1faf5}tr.r-MISSING td{background:#f6f6f3}
 .badge.okb{font-size:15px}
+
+input.tpl,textarea.tpl{background:#eaf3ff}
+.readout{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px}
+.warnbox{background:#fff4e5;border:1.5px solid #f0b36b;color:#6b3f06;border-radius:12px;padding:10px 14px;margin:10px 0;font-size:14px}.warnbox ul,.oklist{margin:6px 0 0;padding-left:18px}.oklist{list-style:none;padding-left:0;color:var(--ok);font-size:14px;font-weight:600}
+table.rt{min-width:560px}table.rt .grp td{background:var(--bg);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}

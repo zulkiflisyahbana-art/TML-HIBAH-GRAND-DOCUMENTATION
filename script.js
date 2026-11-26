@@ -124,15 +124,16 @@ const blank=(p={})=>({id:++UID,brand:'',model:'',vin:'',year:'',cyl:'',eng:'',co
 const addOpt=(k,v)=>{v=String(v??'').trim();if(v)(OPT[k]=OPT[k]||new Set()).add(v);};
 function learn(s){HF.forEach(([k])=>addOpt(k,s[k]));(s.units||[]).forEach(u=>UF.forEach(([k])=>addOpt(k,u[k])));addOpt('shipper',(s.shipper||[]).join('\n'));addOpt('consignee',(s.consignee||[]).join('\n'));}
 function persistOpts(){const o={};for(const k in OPT)o[k]=[...OPT[k]];LS.set('tml_opts',o);}
-const fresh=()=>({key:rid(),confirmed:null,confirmedBy:'',log:[],rev:0,savedRev:null,savedAt:null,done:{},name:'',invNo:'',invDate:'',depart:'',vessel:'',from:D.from,to:D.to,blTotal:'',blQty:'',blChassis:'',mou:'',shipper:[...D.shipper],consignee:[...D.consignee],units:[blank()]});
-const example=()=>({...D,key:(S&&S.key)||rid(),confirmed:null,confirmedBy:'',log:[],rev:0,savedRev:null,savedAt:null,done:{},shipper:[...D.shipper],consignee:[...D.consignee],units:D.units.map(u=>blank({...u,edit:false}))});
-const clean=s=>({...s,units:s.units.map(({id,edit,sure,ai,...u})=>u)});
+const fresh=()=>({key:rid(),confirmed:null,confirmedBy:'',log:[],rev:0,savedRev:null,savedAt:null,done:{},ext:null,src:{},marks:{},readAt:null,name:'',invNo:'',invDate:'',depart:'',vessel:'',from:D.from,to:D.to,blTotal:'',blQty:'',blChassis:'',mou:'',shipper:[...D.shipper],consignee:[...D.consignee],units:[blank()]});
+const example=()=>({...D,key:(S&&S.key)||rid(),confirmed:null,confirmedBy:'',log:[],rev:0,savedRev:null,savedAt:null,done:{},ext:null,src:{},marks:{},readAt:null,shipper:[...D.shipper],consignee:[...D.consignee],units:D.units.map(u=>blank({...u,edit:false}))});
+const clean=s=>({...s,units:s.units.map(({id,edit,sure,ai,tp,...u})=>u)});
 const hydrate=d=>{const u=(d.units||[]).map(x=>blank({...x,edit:false}));return {...fresh(),...d,key:d.key||rid(),units:u.length?u:[blank()]};};
 let dT;function draft(){clearTimeout(dT);dT=setTimeout(()=>LS.set('tml_draft',clean(read())),250);}
 function touch(){ if(S.confirmed){S.confirmed=null;logA('Data diubah setelah konfirmasi — konfirmasi dibatalkan');} S.rev=(S.rev||0)+1; S.done={}; draft();updConf();}
 const cb=(id,k,attrs,val)=>'<div class="cb"><input id="'+id+'" '+attrs+' value="'+String(val??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" autocomplete="off"><button type="button" class="dd" data-k="'+k+'" data-t="'+id+'" aria-label="Pilih">'+CP+'</button></div>';
 function hdr(){ $('hdr').innerHTML=HF.map(([k,l])=>'<div class="w"><label>'+l+'</label>'+cb('h_'+k,k,'data-h="'+k+'"','')+'</div>').join(''); }
-function render(){ HF.forEach(([k])=>$('h_'+k).value=S[k]??''); $('shipper').value=S.shipper.join('\n'); $('consignee').value=S.consignee.join('\n'); $('blChassis').value=S.blChassis||''; $('mou').value=S.mou||''; renderUnits(); renderFiles(); renderLog(); updConf(); }
+function render(){ HF.forEach(([k])=>$('h_'+k).value=S[k]??''); $('shipper').value=S.shipper.join('\n'); $('consignee').value=S.consignee.join('\n'); $('blChassis').value=S.blChassis||''; $('mou').value=S.mou||''; document.querySelectorAll('[data-h],#shipper,#consignee,#blChassis,#mou').forEach(e=>e.classList.remove('ai','tpl')); Object.entries(S.marks||{}).forEach(([id,k])=>{const e=$(id); if(e)e.classList.add(k);});
+  renderUnits(); renderFiles(); renderLog(); updConf(); }
 const sum=u=>[u.brand,u.model].filter(Boolean).join(' ')+(u.vin?' · '+u.vin:'')+(u.kg?' · '+fmt(num(u.kg))+' kg':'')+(num(u.price)?' · ₩'+fmt(num(u.price)).replace('.00',''):'');
 function renderUnits(){
   $('units').innerHTML=S.units.map((u,i)=>{
@@ -140,40 +141,48 @@ function renderUnits(){
     const head='<div class="uh"><b>Unit '+(i+1)+'</b>'+ub+(u.edit?'<span class="s"></span>':'<span class="s">'+(sum(u)||'(belum diisi)')+'</span>')+'<span class="row">'
       +(u.edit?'<button class="sm p" data-a="done" data-id="'+u.id+'">Selesai</button>':'<button class="sm" data-a="edit" data-id="'+u.id+'">Edit</button>')
       +'<button class="sm d" data-a="del" data-id="'+u.id+'">'+(u.sure?'Yakin hapus?':'Hapus')+'</button></span></div>';
-    const form=u.edit?'<div class="g" style="margin-top:12px">'+UF.map(([k,l])=>'<div class="w"><label>'+l+'</label>'+cb('u'+u.id+k,k,'class="'+((u.ai||{})[k]?'ai':'')+'" data-u="'+u.id+'" data-k="'+k+'"',u[k])+'</div>').join('')+'</div>':'';
+    const form=u.edit?'<div class="g" style="margin-top:12px">'+UF.map(([k,l])=>'<div class="w"><label>'+l+'</label>'+cb('u'+u.id+k,k,'class="'+((u.ai||{})[k]?'ai':((u.tp||{})[k]?'tpl':''))+'" data-u="'+u.id+'" data-k="'+k+'"',u[k])+'</div>').join('')+'</div>':'';
     return '<div class="card">'+head+form+'</div>'; }).join('');
   $('uCount').textContent=S.units.length+' unit'; check(); }
 function read(){ const s=clean(S); s.shipper=s.shipper.slice(0,5); s.consignee=s.consignee.slice(0,8); return s; }
 /* ---- Pemeriksaan dan laporan verifikasi ---- */
 const VINRE=/^[A-HJ-NPR-Z0-9]{17}$/i;
 function analyze(s){
-  const R=[], A=(info,data,status,note,go)=>R.push({info,data,status,note:note||'',go});
+  const R=[], A=(info,data,status,note,go,src)=>R.push({info,data,status,note:note||'',go,src:src||''}), sr=k=>(S.src&&S.src[k])||'', X=S.ext||null;
   const n=s.units.length, bl=num(s.blTotal), blq=num(s.blQty);
   const list=(s.blChassis||'').split('\n').map(x=>x.trim().toUpperCase()).filter(Boolean);
   const it=x=>/^\d{1,3}([.,]\d{3})+$/.test(x)?Number(x.replace(/[.,]/g,'')):num(x);
   const mou={}; (s.mou||'').split('\n').forEach(l=>{const m=l.match(/([A-HJ-NPR-Z0-9]{17})\s+([\d.,]+)(?:\s+[₩W]?\s*([\d.,]+))?/i); if(m)mou[m[1].toUpperCase()]={kg:it(m[2]),price:m[3]?it(m[3]):null};});
   [['B/L','B/L'],['MoU / Perjanjian Hibah','MoU'],['NPWP','NPWP']].forEach(([t,nm])=>A('Dokumen sumber · '+nm,FT.has(t)?'Terlampir':'Belum diunggah',FT.has(t)?'VERIFIED':'MISSING',FT.has(t)?'':'Unggah di tab Isi Data, bagian Unggah dokumen',{id:'fType'}));
-  A('Jumlah unit',n+' unit',!n?'MISSING':blq?(n===blq?'VERIFIED':'CONFLICT'):'NEED CONFIRMATION',blq?'B/L: '+blq+' unit':'Isi "Jumlah unit di B/L" untuk mencocokkan',{id:'h_blQty'});
-  A('No. invoice',s.invNo||'-',s.invNo.trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan keterangan invoice di B/L',{id:'h_invNo'});
-  A('Shipper',(s.shipper[0]||'-'),s.shipper.join('').trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan B/L',{id:'shipper'});
-  A('Consignee',(s.consignee[0]||'-'),s.consignee.join('').trim()?'NEED CONFIRMATION':'MISSING','Harus sesuai B/L dan NPWP',{id:'consignee'});
-  A('From / To',(s.from||'-')+' → '+(s.to||'-'),(s.from.trim()&&s.to.trim())?'NEED CONFIRMATION':'MISSING','Port of loading di B/L dapat berbeda dari template',{id:'h_from'});
+  A('Jumlah unit',n+' unit',!n?'MISSING':blq?(n===blq?'VERIFIED':'CONFLICT'):'NEED CONFIRMATION',blq?'B/L: '+blq+' unit':'Isi "Jumlah unit di B/L" untuk mencocokkan',{id:'h_blQty'},sr('blQty'));
+  A('No. invoice',s.invNo||'-',s.invNo.trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan keterangan invoice di B/L',{id:'h_invNo'},sr('invNo'));
+  A('Shipper',(s.shipper[0]||'-'),s.shipper.join('').trim()?'NEED CONFIRMATION':'MISSING','Cocokkan dengan B/L',{id:'shipper'},sr('shipper'));
+  A('Consignee',(s.consignee[0]||'-'),s.consignee.join('').trim()?'NEED CONFIRMATION':'MISSING','Harus sesuai B/L dan NPWP',{id:'consignee'},sr('consignee'));
+  A('From / To',(s.from||'-')+' → '+(s.to||'-'),(s.from.trim()&&s.to.trim())?'NEED CONFIRMATION':'MISSING','Port of loading di B/L dapat berbeda dari template',{id:'h_from'},[sr('from'),sr('to')].filter(Boolean).join(' · '));
   A('Departure date / Vessel',(s.depart||'-')+' / '+(s.vessel||'-'),(s.depart.trim()&&s.vessel.trim())?'NEED CONFIRMATION':'MISSING','Opsional; boleh dikosongkan sesuai keputusan TML',{id:'h_depart'});
   const tw=s.units.reduce((a,u)=>a+num(u.kg),0);
-  A('Total berat',fmt(tw)+' kg',!bl?'NEED CONFIRMATION':(tw===bl?'VERIFIED':'CONFLICT'),bl?'B/L: '+fmt(bl)+' kg':'Isi berat total B/L untuk mencocokkan',{id:'h_blTotal'});
+  A('Total berat',fmt(tw)+' kg',!bl?'NEED CONFIRMATION':(tw===bl?'VERIFIED':'CONFLICT'),bl?'B/L: '+fmt(bl)+' kg':'Isi berat total B/L untuk mencocokkan',{id:'h_blTotal'},sr('blTotal'));
   const seen={};
   S.units.forEach((su,i)=>{ const u=s.units[i], L='Unit '+(i+1), v=u.vin.trim().toUpperCase(); seen[v]=(seen[v]||0)+1;
-    const G=k=>({u:su.id,k});
+    const G=k=>({u:su.id,k}), su_=k=>sr('u:'+v+':'+k);
     let st,nt=''; if(!v){st='MISSING';} else if(!VINRE.test(v)){st='CONFLICT';nt='VIN harus 17 karakter alfanumerik tanpa I, O, Q ('+v.length+' karakter)';} else if(list.length){st=list.includes(v)?'VERIFIED':'CONFLICT';nt=list.includes(v)?'Ada di daftar chassis B/L':'Tidak ada di daftar chassis B/L';} else {st='NEED CONFIRMATION';nt='Format valid; cocokkan dengan B/L';}
-    A(L+' · Chassis / VIN',v||'-',st,nt,G('vin'));
-    A(L+' · Brand / Model / Year',[u.brand,u.model,u.year].filter(Boolean).join(' / ')||'-',(u.brand&&u.model&&u.year)?((/^\d{4}$/.test(String(u.year).trim())&&+u.year>=1980&&+u.year<=2027)?'NEED CONFIRMATION':'CONFLICT'):'MISSING',(u.brand&&u.model&&u.year)?'Cocokkan dengan MoU dan spesifikasi':'',G('brand'));
-    A(L+' · Cylinder / Engine / Color',[u.cyl,u.eng,u.color].filter(Boolean).join(' / ')||'-',(u.cyl&&u.eng&&u.color)?'NEED CONFIRMATION':'MISSING','Belum ada di B/L dan MoU; ikuti template atau spesifikasi kendaraan',G('cyl'));
-    A(L+' · Nomor mesin',u.engNo||'-',u.engNo.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template',G('engNo'));
-    A(L+' · Dimensi',u.dim||'-',u.dim.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template',G('dim'));
-    const mm=mou[v], mw=mm?mm.kg:null; A(L+' · Berat',fmt(num(u.kg))+' kg',!num(u.kg)?'MISSING':(mw==null?'NEED CONFIRMATION':(mw===num(u.kg)?'VERIFIED':'CONFLICT')),mw==null?'Isi data MoU untuk mencocokkan':'MoU: '+fmt(mw)+' kg',G('kg'));
+    A(L+' · Chassis / VIN',v||'-',st,nt,G('vin'),su_('vin'));
+    A(L+' · Brand / Model / Year',[u.brand,u.model,u.year].filter(Boolean).join(' / ')||'-',(u.brand&&u.model&&u.year)?((/^\d{4}$/.test(String(u.year).trim())&&+u.year>=1980&&+u.year<=2027)?'NEED CONFIRMATION':'CONFLICT'):'MISSING',(u.brand&&u.model&&u.year)?'Cocokkan dengan MoU dan spesifikasi':'',G('brand'),su_('brand'));
+    A(L+' · Cylinder / Engine / Color',[u.cyl,u.eng,u.color].filter(Boolean).join(' / ')||'-',(u.cyl&&u.eng&&u.color)?'NEED CONFIRMATION':'MISSING','Belum ada di B/L dan MoU; ikuti template atau spesifikasi kendaraan',G('cyl'),su_('cyl'));
+    A(L+' · Nomor mesin',u.engNo||'-',u.engNo.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template',G('engNo'),su_('engNo'));
+    A(L+' · Dimensi',u.dim||'-',u.dim.trim()?'NEED CONFIRMATION':'MISSING','Opsional; tidak tercetak di template',G('dim'),su_('dim'));
+    const mm=mou[v], mw=mm?mm.kg:null; A(L+' · Berat',fmt(num(u.kg))+' kg',!num(u.kg)?'MISSING':(mw==null?'NEED CONFIRMATION':(mw===num(u.kg)?'VERIFIED':'CONFLICT')),mw==null?'Isi data MoU untuk mencocokkan':'MoU: '+fmt(mw)+' kg',G('kg'),su_('kg'));
     const pr=num(u.price), mp=mm?mm.price:null, same=s.units.findIndex((x,j)=>j!==i&&num(x.price)>0&&num(x.price)===pr);
-    A(L+' · Harga satuan','₩'+fmt(pr).replace('.00',''),pr<=0?'MISSING':(mp==null?'NEED CONFIRMATION':(mp===pr?'VERIFIED':'CONFLICT')),mp!=null?'MoU: ₩'+fmt(mp).replace('.00',''):(same>=0?'Sama dengan Unit '+(same+1)+'; pastikan benar sesuai lampiran MoU':'Cocokkan dengan lampiran MoU; atau isi harga di data MoU'),G('price'));
+    A(L+' · Harga satuan','₩'+fmt(pr).replace('.00',''),pr<=0?'MISSING':(mp==null?'NEED CONFIRMATION':(mp===pr?'VERIFIED':'CONFLICT')),mp!=null?'MoU: ₩'+fmt(mp).replace('.00',''):(same>=0?'Sama dengan Unit '+(same+1)+'; pastikan benar sesuai lampiran MoU':'Cocokkan dengan lampiran MoU; atau isi harga di data MoU'),G('price'),su_('price'));
   });
+  if(X){
+    if(X.bl&&X.npwp&&X.bl.npwp&&X.npwp.npwp15){ const same=X.bl.npwp===X.npwp.npwp15; A('NPWP consignee: B/L ↔ kartu NPWP',X.bl.npwp+' ↔ '+X.npwp.npwp15,same?'VERIFIED':'CONFLICT',same?'Nomor sama pada B/L dan kartu NPWP':'Nomor berbeda; periksa dokumen','','B/L hlm.1 · NPWP hlm.1 (OCR)'); }
+    else if(X.bl&&X.bl.npwp) A('NPWP consignee',X.bl.npwp,'NEED CONFIRMATION','Kartu NPWP belum dibaca atau diunggah','','B/L hlm.1');
+    if(X.npwp&&X.npwp.name){ const t=BACA.norm(s.consignee.join('')), ws=X.npwp.name.toUpperCase().split(/[^A-Z]+/).filter(w=>w.length>=4), hit=ws.filter(w=>t.includes(w)).length, rt=ws.length?hit/ws.length:0;
+      A('Nama consignee ↔ kartu NPWP',Math.round(rt*100)+'% kata cocok',rt>=0.7?'VERIFIED':'NEED CONFIRMATION','OCR kartu NPWP dapat berisi salah baca kecil','','NPWP hlm.1 (OCR)'); }
+    if(X.mou&&X.bl){ const bv=new Set(X.bl.chassis), out=X.mou.units.filter(u=>!bv.has(u.vin)); if(out.length)A('Unit di MoU yang tidak ada di B/L ini',out.length+' unit: '+out.map(u=>'…'+u.vin.slice(-6)).join(', '),'NEED CONFIRMATION','Dikirim terpisah pada pengiriman lain?','','MoU hlm.2 · B/L hlm.1');
+      A('Jumlah chassis B/L = jumlah unit B/L',X.bl.chassis.length+' chassis, '+X.bl.qty+' unit',X.bl.chassis.length===X.bl.qty?'VERIFIED':'CONFLICT','','',X.bl.src); }
+  }
   Object.keys(seen).filter(k=>k&&seen[k]>1).forEach(k=>A('VIN kembar',k,'CONFLICT','Dipakai oleh '+seen[k]+' unit'));
   list.filter(v=>!s.units.some(u=>u.vin.trim().toUpperCase()===v)).forEach(v=>A('Chassis di B/L belum ada di form',v,'CONFLICT','Tambahkan unit'));
   return R;
@@ -191,7 +200,7 @@ function check(){ const s=read(), r=[], v=s.units.map(u=>u.vin.trim());
   $('checks').innerHTML=r.map(([ok,t])=>'<div class="chk '+(ok?'ok':'wn')+'">'+(ok?'✓ ':'⚠ ')+t+'</div>').join(''); renderRep(); }
 const stc=s=>s.split(' ')[0];
 function repHTML(act){ const R=analyze(read());
-  return '<thead><tr><th>No</th><th>Informasi</th><th>Data pada form</th><th>Status</th><th>Catatan</th>'+(act?'<th></th>':'')+'</tr></thead><tbody>'+R.map((r,i)=>'<tr class="r-'+stc(r.status)+'"><td>'+(i+1)+'</td><td>'+esc(r.info)+'</td><td>'+esc(r.data)+'</td><td class="st s-'+stc(r.status)+'">'+r.status+'</td><td>'+esc(r.note)+'</td>'+(act?'<td>'+(r.go?'<button class="sm" data-edit="'+esc(JSON.stringify(r.go)).replace(/"/g,'&quot;')+'">Edit</button>':'')+'</td>':'')+'</tr>').join('')+'</tbody>'; }
+  return '<thead><tr><th>No</th><th>Informasi</th><th>Data pada form</th><th>Sumber dokumen</th><th>Status</th><th>Catatan</th>'+(act?'<th></th>':'')+'</tr></thead><tbody>'+R.map((r,i)=>'<tr class="r-'+stc(r.status)+'"><td>'+(i+1)+'</td><td>'+esc(r.info)+'</td><td>'+esc(r.data)+'</td><td>'+esc(r.src||'')+'</td><td class="st s-'+stc(r.status)+'">'+r.status+'</td><td>'+esc(r.note)+'</td>'+(act?'<td>'+(r.go?'<button class="sm" data-edit="'+esc(JSON.stringify(r.go)).replace(/"/g,'&quot;')+'">Edit</button>':'')+'</td>':'')+'</tr>').join('')+'</tbody>'; }
 function renderRep(){ $('rep').innerHTML=repHTML(true); const R=analyze(read()),c={};R.forEach(r=>c[stc(r.status)]=(c[stc(r.status)]||0)+1);
   $('repSum').innerHTML=['VERIFIED','NEED','CONFLICT','MISSING'].map(k=>'<span class="chip s-'+k+'">'+(k==='NEED'?'NEED CONFIRMATION':k)+': '+(c[k]||0)+'</span>').join(''); }
 function fname(p,ext){ return 'TML_'+p+'_'+((S.name||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'')||'PROYEK')+'.'+(ext||'xlsx'); }
@@ -247,6 +256,79 @@ $('fFiles').onchange=async e=>{ const fs=[...e.target.files]; e.target.value='';
   for(const f of fs){ try{ await IDB.add({pid:S.key,type:$('fType').value,name:f.name,size:f.size,mime:f.type,blob:f,added:Date.now()}); ok++; }catch(x){ note('Gagal menyimpan lampiran: '+(x.message||x)); } }
   if(ok)note(ok+' lampiran ditambahkan. Lampiran tersimpan di browser perangkat ini dan tidak ikut penyimpanan online.'); renderFiles(); };
 $('vClose').onclick=()=>{$('viewer').hidden=true;$('vBody').innerHTML='';};
+
+/* ---- Baca dokumen otomatis: teks asli PDF + OCR di browser, hasil ditinjau dulu sebelum diisi ---- */
+let EXT=null, PATCH=null; const REQT=['B/L','MoU / Perjanjian Hibah','NPWP'];
+const fmtPort=(t,sep)=>{ const p=String(t||'').split(',').map(x=>x.trim()).filter(Boolean); if(!p.length)return ''; let c=p[1]?BACA.title(p[1]):''; if(/^korea$/i.test(c))c='Republic of Korea'; return c?BACA.title(p[0])+sep+c:BACA.title(p[0]); };
+const wrapTxt=(t,n)=>{ const o=[]; let l=''; String(t).split(/\s+/).filter(Boolean).forEach(w=>{ if((l+' '+w).trim().length>n&&l){o.push(l);l=w;} else l=(l+' '+w).trim(); }); if(l)o.push(l); return o; };
+function joinWrapped(lines,vocab){ if(!lines.length)return ''; let out=lines[0]; for(let i=1;i<lines.length;i++){ const last=(out.split(/\s+/).pop()||'').replace(/[^A-Za-z0-9]/g,''), first=(lines[i].split(/\s+/)[0]||'').replace(/[^A-Za-z0-9]/g,''), c=(last+first).toUpperCase(); out+=(vocab&&vocab.has(c)&&!vocab.has(last.toUpperCase()))?lines[i]:' '+lines[i]; } return out; }
+function buildPatch(x){
+  const bl=x.bl, mo=x.mou, np=x.npwp, R=[], W=[], OK=[], tp=(D.units&&D.units[0])||{};
+  const row=(group,label,value,src,set,o={})=>R.push({group,label,value:Array.isArray(value)?value.join(' / '):String(value),src,set,use:o.use!==false,kind:o.kind||'doc',note:o.note||''});
+  const put=(s,k,v,src,kind)=>{ s[k]=v; s.src[k]=src; s.marks['h_'+k]=kind||'ai'; }, putTA=(s,k,v,src,kind)=>{ s[k]=v; s.src[k]=src; s.marks[k]=kind||'ai'; };
+  let UT=[];
+  if(!bl) W.push('B/L belum diunggah atau tidak terbaca. Unggah B/L dengan jenis "B/L" (PDF asli yang masih berisi teks paling akurat).');
+  else { const sB=bl.src;
+    if(!S.name.trim()&&bl.no) row('Data proyek','Nama proyek (saran)','HIBAH_'+bl.no,sB,s=>{ s.name='HIBAH_'+bl.no; s.marks.h_name='ai'; });
+    if(bl.invNo) row('Data proyek','No. invoice',bl.invNo,sB,s=>put(s,'invNo',bl.invNo,sB));
+    if(bl.invDate) row('Data proyek','Tanggal invoice',bl.invDate,'Diturunkan dari No. invoice di B/L',s=>put(s,'invDate',bl.invDate,'Diturunkan dari No. invoice di B/L'));
+    const from=fmtPort(bl.pol,','), to=fmtPort(bl.pod,'-');
+    if(from) row('Data proyek','From',from,sB+' (Port of loading)',s=>put(s,'from',from,sB+' (Port of loading)'),{note:(D.from&&BACA.norm(D.from)!==BACA.norm(from))?'Template contoh memakai: '+D.from+'. Dipakai: sesuai B/L.':''});
+    if(to) row('Data proyek','To',to,sB+' (Port of discharge)',s=>put(s,'to',to,sB+' (Port of discharge)'));
+    if(bl.depart) row('Data proyek','Departure date',bl.depart,sB+' (Laden on board)',s=>put(s,'depart',bl.depart,sB+' (Laden on board)'),{use:false,note:'Keputusan TML sebelumnya: dikosongkan. Centang bila ingin diisi.'});
+    if(bl.vessel) row('Data proyek','Vessel',bl.vessel,sB,s=>put(s,'vessel',bl.vessel,sB),{use:false,note:'Keputusan TML sebelumnya: dikosongkan. Centang bila ingin diisi.'});
+    if(bl.grossKg) row('Pembanding','Berat total B/L (kg)',bl.grossKg,sB,s=>put(s,'blTotal',String(bl.grossKg),sB));
+    if(bl.qty) row('Pembanding','Jumlah unit di B/L',bl.qty,sB,s=>put(s,'blQty',String(bl.qty),sB));
+    if(bl.chassis.length) row('Pembanding','Daftar chassis B/L',bl.chassis,sB,s=>putTA(s,'blChassis',bl.chassis.join('\n'),sB));
+    const isT=l=>/^(TEL|FAX)\b/i.test(l), shName=bl.shipperRaw.filter(l=>!isT(l)), shTel=(bl.shipperRaw.find(l=>/^TEL\b/i.test(l))||'').replace(/^TEL\s*:\s*/i,'').trim();
+    if(shName.length){ const shMatch=D.shipper&&D.shipper.length>=3&&BACA.norm(shName.join(' '))===BACA.norm(D.shipper.slice(0,3).join(''));
+      let sh=shMatch?D.shipper.slice(0,3):wrapTxt(shName.join(' '),58); if(shTel)sh=sh.concat(['TEL : '+shTel+' ']); if(bl.shipFax)sh=sh.concat(['FAX : '+bl.shipFax]); while(sh.length>5){ sh.splice(0,2,sh[0]+' '+sh[1]); }
+      row('Shipper dan Consignee','Shipper',sh,sB+(shMatch?' (nama dan alamat sama dengan format TML)':''),s=>putTA(s,'shipper',sh,sB+(shMatch?' (cocok format TML)':''))); }
+    if(bl.consigneeRaw.length){ const cText=joinWrapped(bl.consigneeRaw,x.vocab)+' '+(bl.consAddr2||''), cMatch=D.consignee&&D.consignee.length>=4&&BACA.norm(cText)===BACA.norm(D.consignee.slice(0,4).join(''));
+      let cons=cMatch?D.consignee.slice(0,4):wrapTxt(cText,60); const ct=[]; if(bl.tel)ct.push('Tel : '+bl.tel); if(bl.emails.length)ct.push('Email : '+bl.emails.join(', ')); if(bl.attn)ct.push('ATTN: '+bl.attn); cons=cons.concat(ct); while(cons.length>8){ cons.splice(0,2,cons[0]+' '+cons[1]); }
+      const src=sB+(np?' · NPWP hlm.1':'')+(cMatch?' (nama dan alamat sama dengan format TML)':'');
+      row('Shipper dan Consignee','Consignee',cons,src,s=>putTA(s,'consignee',cons,src),{note:(cMatch&&D.consignee.slice(4).join('')&&BACA.norm(D.consignee.slice(4).join(''))!==BACA.norm(ct.join('')))?'Telepon/email/ATTN memakai data B/L (berbeda dari template contoh).':''}); }
+    UT=bl.chassis.map(v=>({vin:v,brand:bl.brand||'',model:bl.model||'',year:bl.year||'',cyl:'',eng:'',color:'',kg:'',price:'',engNo:'',dim:'',_ai:{},_tp:{},_src:{}}));
+    const per=(bl.grossKg&&bl.qty&&bl.qty===bl.chassis.length)?bl.grossKg/bl.qty:0;
+    UT.forEach((u,i)=>{ const m=mo&&mo.units.find(z=>z.vin===u.vin), L='Unit '+(i+1), y=(m&&m.year)||u.year, sI=sB+(m?' · MoU hlm.2 (OCR)':'');
+      row(L,'Identitas',[u.vin,[u.brand,u.model].filter(Boolean).join(' '),y].join(' · '),sI,()=>{ u._use=true; u.year=y; ['vin','brand','model','year'].forEach(k=>u._ai[k]=1); u._src.vin=sI; u._src.brand=sB; u._src.year=sI; });
+      if(per) row(L,'Berat (kg)',fmt(per)+' kg',sB+' (total ÷ jumlah unit, aturan TML)',()=>{ u.kg=String(per%1?per.toFixed(2):per); u._ai.kg=1; u._src.kg=sB+' (total ÷ jumlah unit)'; });
+      if(m&&m.priceOk&&m.price) row(L,'Harga satuan (₩)',fmt(m.price).replace('.00',''),'MoU lampiran (OCR, lolos cek jumlah total)',()=>{ u.price=String(m.price); u._ai.price=1; u._src.price='MoU lampiran (OCR, lolos cek jumlah total)'; });
+      if(m&&m.dim) row(L,'Dimensi (mm)',m.dim.replace(/x/g,' × '),'MoU lampiran (OCR)',()=>{ u.dim=m.dim.replace(/x/g,' x ')+' mm'; u._ai.dim=1; u._src.dim='MoU lampiran (OCR)'; });
+      if(tp.cyl||tp.eng||tp.color) row(L,'Cylinder / Engine / Color',[tp.cyl,tp.eng,tp.color].filter(Boolean).join(' / '),'Contoh template TML (bukan dari dokumen)',()=>{ u.cyl=tp.cyl||''; u.eng=tp.eng||''; u.color=tp.color||''; ['cyl','eng','color'].forEach(k=>u._tp[k]=1); u._src.cyl='Contoh template TML (bukan dari dokumen)'; },{kind:'tpl',note:'Tidak ada di B/L, MoU, maupun NPWP; periksa dengan spesifikasi kendaraan.'}); });
+    if(bl.chassis.length!==bl.qty) W.push('Jumlah chassis di B/L ('+bl.chassis.length+') tidak sama dengan jumlah unit ('+bl.qty+'); periksa B/L.');
+    if(per) OK.push('Berat per unit = total B/L ('+fmt(bl.grossKg)+' kg) ÷ '+bl.qty+' unit = '+fmt(per)+' kg (aturan TML).'); }
+  if(mo){ const out=mo.units.filter(u=>!bl||!bl.chassis.includes(u.vin)); if(out.length)W.push('MoU memuat '+out.length+' unit yang tidak ada di B/L ini ('+out.map(u=>'…'+u.vin.slice(-6)).join(', ')+'): tidak diisi; dikirim terpisah?');
+    if(!mo.priceValidated) W.push('Harga, berat, dan dimensi per unit di tabel lampiran MoU tidak terbaca otomatis (scan kecil). Isi manual sambil membuka MoU (tombol Lihat). Total MoU terbaca: ₩'+fmt(mo.totalValue||0).replace('.00','')+' untuk '+(mo.totalUnits||'?')+' unit.');
+    if(mo.units.some(u=>u.snapped))W.push('Sebagian nomor chassis MoU dikoreksi 1 karakter agar cocok dengan B/L; periksa.');
+    OK.push('MoU terbaca: '+mo.units.length+' chassis'+(mo.no?', nomor '+mo.no:'')+(mo.date?', tanggal '+mo.date:'')+'.'); }
+  else W.push('MoU belum diunggah atau tidak terbaca: harga dan berat per unit harus diisi manual.');
+  if(np&&bl&&bl.npwp&&np.npwp15){ if(bl.npwp===np.npwp15)OK.push('NPWP consignee sama pada B/L dan kartu NPWP ('+np.npwp15+').'); else W.push('NPWP B/L ('+bl.npwp+') berbeda dari kartu NPWP ('+np.npwp15+').'); }
+  else if(!np) W.push('Kartu NPWP belum diunggah atau tidak terbaca: kecocokan NPWP consignee tidak bisa diperiksa.');
+  (x.errors||[]).forEach(e=>W.push('Gagal membaca: '+e));
+  return {rows:R,warns:W,oks:OK,finish:s=>{ const used=UT.filter(u=>u._use); if(!used.length)return; s.units=used.map(u=>{ const {_use,_ai,_tp,_src,...f}=u; Object.keys(_src).forEach(k=>{s.src['u:'+u.vin+':'+k]=_src[k];}); return blank({...f,edit:true,ai:_ai,tp:_tp}); }); }}; }
+const pick=(o,ks)=>{const r={};ks.forEach(k=>{if(o[k]!==undefined)r[k]=o[k];});return r;};
+const compactExt=x=>({at:Date.now(),bl:x.bl?pick(x.bl,['no','vessel','pol','pod','grossKg','qty','chassis','brand','model','year','invNo','invDate','npwp','hs','depart','containers','src','file']):null,mou:x.mou?{...pick(x.mou,['no','date','totalUnits','totalValue','priceValidated','src','file']),units:x.mou.units.map(u=>pick(u,['vin','km','year','brand']))}:null,npwp:x.npwp?pick(x.npwp,['npwp15','npwp16','name','registered','kpp','src','file']):null});
+function showPatch(){ const P=PATCH, g={}, chip=(ok,t)=>'<span class="dchip '+(ok?'ok':'miss')+'">'+(ok?'✓ ':'⚠ ')+t+'</span>';
+  let h='<div class="chips">'+chip(EXT.bl,'B/L'+(EXT.bl?' terbaca (teks asli PDF)':' tidak terbaca'))+chip(EXT.mou,'MoU'+(EXT.mou?' terbaca (OCR)':' tidak terbaca'))+chip(EXT.npwp,'NPWP'+(EXT.npwp?' terbaca (OCR)':' tidak terbaca'))+'</div>';
+  if(P.oks.length)h+='<ul class="oklist">'+P.oks.map(w=>'<li>✓ '+esc(w)+'</li>').join('')+'</ul>';
+  if(P.warns.length)h+='<div class="warnbox"><b>Perlu perhatian</b><ul>'+P.warns.map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul></div>';
+  h+='<div class="tw"><table class="rt"><thead><tr><th></th><th>Isian</th><th>Nilai terbaca</th><th>Sumber</th></tr></thead><tbody>'; let last='';
+  P.rows.forEach((r,i)=>{ if(r.group!==last){ h+='<tr class="grp"><td colspan="4">'+esc(r.group)+'</td></tr>'; last=r.group; }
+    h+='<tr><td><input type="checkbox" data-pi="'+i+'"'+(r.use?' checked':'')+'></td><td>'+esc(r.label)+(r.kind==='tpl'?' <span class="ub wn">dari template</span>':'')+'</td><td>'+esc(r.value)+(r.note?'<div class="sub">'+esc(r.note)+'</div>':'')+'</td><td>'+esc(r.src)+'</td></tr>'; });
+  h+='</tbody></table></div><div class="row" style="margin-top:12px"><button class="p" id="bApply">✔ Isi ke Data Proyek &amp; Unit</button><button class="sm" id="bReadX">Tutup</button></div><p class="sub">Mengisi akan menggantikan isian unit saat ini. Hasilnya tetap bisa diedit. Kuning = dari dokumen, biru = dari template contoh.</p>';
+  $('readOut').innerHTML=h; $('readOut').hidden=false; $('bApply').onclick=applyPatch; $('bReadX').onclick=()=>{$('readOut').hidden=true;}; }
+function applyPatch(){ const ch=[...document.querySelectorAll('#readOut [data-pi]')].map(c=>c.checked); PATCH.rows.forEach((r,i)=>{r.use=ch[i];}); S.src=S.src||{}; S.marks=S.marks||{};
+  PATCH.rows.forEach(r=>{ if(r.use)r.set(S); }); PATCH.finish(S); S.ext=compactExt(EXT); S.readAt=Date.now(); logA('Data proyek dan unit diisi otomatis dari dokumen'); render(); touch(); $('readOut').hidden=true;
+  note('✓ Data terisi dari dokumen. Periksa isian berwarna (kuning = dari dokumen, biru = template contoh), edit bila perlu, lalu Simpan.'); window.scrollTo({top:Math.max(0,$('hdr').getBoundingClientRect().top+scrollY-130),behavior:'smooth'}); }
+async function readDocs(){ if(typeof BACA==='undefined'||!window.pdfjsLib||!window.Tesseract){ note('Pembaca dokumen belum terpasang: unggah folder "baca" dan berkas baca.js ke repository.'); return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc='baca/pdf.worker.min.js';
+  const fs=(await IDB.list(S.key))||[], docs=fs.filter(f=>REQT.includes(f.type)).map(f=>({id:f.id,name:f.name,type:f.type,file:new File([f.blob],f.name,{type:f.mime||(/\.pdf$/i.test(f.name)?'application/pdf':'')})}));
+  if(!docs.length){ note('Unggah dulu dokumen dengan jenis B/L, MoU / Perjanjian Hibah, atau NPWP.'); return; }
+  const t0=Date.now(); $('readLog').textContent='Membaca…'; const x=await BACA.readAll(docs,m=>{$('readLog').textContent=m;});
+  EXT=x; PATCH=buildPatch(x); showPatch(); $('readLog').textContent='Selesai dalam '+Math.round((Date.now()-t0)/1000)+' detik. Periksa hasil di bawah, lalu klik "Isi ke Data Proyek & Unit".'; logA('Dokumen dibaca otomatis ('+docs.length+' berkas)'); }
+$('bRead').onclick=()=>busy('bRead',readDocs);
+
 /* ---- Menu ▾ dan event ---- */
 function closeMenus(){document.querySelectorAll('.menu').forEach(m=>m.remove());}
 function openMenu(btn){ closeMenus(); const k=btn.dataset.k, tgt=$(btn.dataset.t), w=btn.closest('.w'); const L=[...(OPT[k]||[])].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
@@ -270,9 +352,9 @@ document.addEventListener('click',async e=>{
   if(a==='edit'){u.edit=true;renderUnits();} else if(a==='done'){u.edit=false;renderUnits();}
   else if(a==='del'){ if(u.sure){S.units=S.units.filter(x=>x!==u);renderUnits();touch();} else {u.sure=true;renderUnits();setTimeout(()=>{if(S.units.includes(u)&&u.sure){u.sure=false;renderUnits();}},3000);} } });
 document.addEventListener('input',e=>{ const t=e.target, d=t.dataset; if(!(d.h||d.u||d.ml||d.s))return;
-  if(d.h)S[d.h]=t.value; else if(d.u){const u=S.units.find(x=>x.id===+d.u);u[d.k]=t.value;if(u.ai)delete u.ai[d.k];}
+  if(d.h)S[d.h]=t.value; else if(d.u){const u=S.units.find(x=>x.id===+d.u);u[d.k]=t.value;if(u.ai)delete u.ai[d.k];if(u.tp)delete u.tp[d.k];}
   else if(d.ml)S[d.ml]=t.value.split('\n'); else if(d.s)S[d.s]=t.value;
-  t.classList.remove('ai'); check(); touch(); });
+  t.classList.remove('ai','tpl'); if(S.marks&&t.id)delete S.marks[t.id]; check(); touch(); });
 $('bAdd').onclick=()=>{S.units.forEach(u=>u.edit=false);const p=S.units[S.units.length-1]||{};S.units.push(blank({brand:p.brand||'',model:p.model||'',year:p.year||'',cyl:p.cyl||'',eng:p.eng||'',color:p.color||'',kg:p.kg||''}));renderUnits();touch();};
 $('projSel').onchange=e=>{const p=SAVED.find(x=>x.id===e.target.value);$('bDelP').hidden=!p;if(p)load(p);};
 $('bNew').onclick=()=>{S=fresh();$('projSel').value='';$('bDelP').hidden=true;render();draft();note('');};
@@ -286,12 +368,13 @@ $('bDelP').onclick=async()=>{ if(!sureP){sureP=true;$('bDelP').textContent='Yaki
 /* ---- Tahap 1 -> 2 -> 3 ---- */
 function tab(n){ document.querySelectorAll('.tab').forEach(t=>t.hidden=t.dataset.tab!==n); document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===n)); window.scrollTo(0,0);
   if(n==='ver'){renderRep();renderFiles();renderLog();} if(n==='isi')renderFiles(); updConf(); if(n==='xls'&&S.confirmed)showPreview(); }
-const LBL={bSaveGo:'💾 Simpan & Lanjut ke Verifikasi',bSaveV:'💾 Simpan',bSaveX:'💾 Simpan',bConf:'✅ Telah Dikonfirmasi',bXlsx:'⬇ Unduh Excel (.xlsx)',bBoth:'Unduh CI + PL',bPrint:'🖨 Cetak',bPdf:'📄 Ekspor PDF',bZip:'📦 Unduh Paket Arsip (.zip)',bFolder:'💾 Simpan ke Folder TML HIBAH',bDrive:'☁ Kirim ke Google Drive (eksperimental)'};
+const LBL={bSaveGo:'💾 Simpan & Lanjut ke Verifikasi',bSaveV:'💾 Simpan',bSaveX:'💾 Simpan',bConf:'✅ Telah Dikonfirmasi',bXlsx:'⬇ Unduh Excel (.xlsx)',bBoth:'Unduh CI + PL',bPrint:'🖨 Cetak',bPdf:'📄 Ekspor PDF',bRead:'🔍 Baca dokumen otomatis',bZip:'📦 Unduh Paket Arsip (.zip)',bFolder:'💾 Simpan ke Folder TML HIBAH',bDrive:'☁ Kirim ke Google Drive (eksperimental)'};
 const hm=t=>t?new Date(t).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}):'';
 function setBtn(id,on,txt){ const b=$(id); if(!b)return; b.classList.toggle('done',!!on); b.textContent=on?txt:LBL[id]; }
 function tk(id,st,txt,title){ const e=$(id); if(!e)return; e.className='tk '+st; e.textContent=txt; e.title=title; e.parentNode.classList.toggle('st-ok',st==='ok'); }
 function applyStates(){ if(!S)return; const saved=S.rev===S.savedRev&&!!S.savedAt, d=S.done||{};
   ['bSaveGo','bSaveV','bSaveX'].forEach(id=>setBtn(id,saved,'✓ Tersimpan '+hm(S.savedAt)));
+  setBtn('bRead',!!S.readAt,'✓ Dokumen dibaca '+hm(S.readAt));
   setBtn('bConf',!!S.confirmed,'✓ Terkonfirmasi '+hm(S.confirmed));
   setBtn('bXlsx',d[PK],'✓ '+PK+' terunduh'); setBtn('bBoth',d.CI&&d.PL,'✓ CI + PL terunduh'); setBtn('bPdf',d['pdf'+PK],'✓ PDF '+PK+' dibuat'); setBtn('bPrint',d.print,'✓ Cetak dibuka');
   setBtn('bZip',d.zip,'✓ Arsip ZIP terunduh'); setBtn('bFolder',d.folder,'✓ Tersimpan di folder'); setBtn('bDrive',d.drive,'✓ Terkirim ke Drive');
@@ -411,7 +494,8 @@ $('lockPass').addEventListener('keydown',e=>{if(e.key==='Enter')$('bUnlock').cli
 $('bLock').onclick=()=>{ forget(); location.reload(); };
 (async()=>{ const need=[['JSZip','jszip.min.js'],['html2canvas','html2canvas.min.js'],['jspdf','jspdf.umd.min.js'],['renderSheet','preview.js']].filter(([g])=>typeof window[g]==='undefined');
   if(!window.TML_VAULT&&!window.TML_TEMPLATES)need.push(['','vault.enc.js atau templates-data.js']);
-  if(need.length){ $('warn').hidden=false; $('warn').innerHTML='<b>Berkas pendukung belum terunggah ke repository:</b> '+need.map(n=>'<code>'+n[1]+'</code>').join(', ')+'. Unggah file tersebut ke repository <b>di level yang sama dengan index.html</b> (bukan di dalam folder), tunggu 1–3 menit, lalu muat ulang dengan Ctrl+F5.'; }
+  const opt=[]; if(typeof window.pdfjsLib==='undefined')opt.push('baca/pdf.min.js'); if(typeof window.Tesseract==='undefined')opt.push('baca/tesseract.min.js'); if(typeof BACA==='undefined')opt.push('baca.js');
+  if(need.length||opt.length){ $('warn').hidden=false; $('warn').innerHTML='<b>Berkas pendukung belum terunggah ke repository:</b> '+need.map(n=>'<code>'+n[1]+'</code>').concat(opt.map(n=>'<code>'+n+'</code>')).join(', ')+'. Unggah file tersebut ke repository <b>di level yang sama dengan index.html</b> (untuk folder <code>baca</code>, unggah foldernya juga), tunggu 1–3 menit, lalu muat ulang dengan Ctrl+F5.'+(need.length?'':' <i>Aplikasi tetap berjalan; hanya fitur Baca dokumen otomatis yang belum aktif.</i>'); }
   $('bLock').hidden=!window.TML_VAULT;
   if(!need.length&&!window.TML_VAULT){ D=Object.assign(DDEF(),window.TML_D||{}); startApp(); return; }   // mode terbuka
   let p=null; try{ p=sessionStorage.getItem('tml_pass')||localStorage.getItem('tml_pass'); }catch(e){}
