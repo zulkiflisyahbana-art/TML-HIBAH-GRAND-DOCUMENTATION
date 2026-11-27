@@ -321,8 +321,7 @@ function showPatch(){ const P=PATCH, g={}, chip=(ok,t)=>'<span class="dchip '+(o
 function applyPatch(){ const ch=[...document.querySelectorAll('#readOut [data-pi]')].map(c=>c.checked); PATCH.rows.forEach((r,i)=>{r.use=ch[i];}); S.src=S.src||{}; S.marks=S.marks||{};
   PATCH.rows.forEach(r=>{ if(r.use)r.set(S); }); PATCH.finish(S); S.ext=compactExt(EXT); S.readAt=Date.now(); logA('Data proyek dan unit diisi otomatis dari dokumen'); render(); touch(); $('readOut').hidden=true;
   note('✓ Data terisi dari dokumen. Periksa isian berwarna (kuning = dari dokumen, biru = template contoh), edit bila perlu, lalu Simpan.'); window.scrollTo({top:Math.max(0,$('hdr').getBoundingClientRect().top+scrollY-130),behavior:'smooth'}); }
-async function readDocs(){ if(typeof BACA==='undefined'||!window.pdfjsLib||!window.Tesseract){ note('Pembaca dokumen belum terpasang: unggah folder "baca" dan berkas baca.js ke repository.'); return; }
-  pdfjsLib.GlobalWorkerOptions.workerSrc='baca/pdf.worker.min.js';
+async function readDocs(){ try{ $('readLog').textContent='Menyiapkan pembaca dokumen…'; await ensureReader(); }catch(e){ $('readLog').textContent=''; note('Pembaca dokumen belum bisa dimuat: '+(e.message||e)); return; }
   const fs=(await IDB.list(S.key))||[], docs=fs.filter(f=>REQT.includes(f.type)).map(f=>({id:f.id,name:f.name,type:f.type,file:new File([f.blob],f.name,{type:f.mime||(/\.pdf$/i.test(f.name)?'application/pdf':'')})}));
   if(!docs.length){ note('Unggah dulu dokumen dengan jenis B/L, MoU / Perjanjian Hibah, atau NPWP.'); return; }
   const t0=Date.now(); $('readLog').textContent='Membaca…'; const x=await BACA.readAll(docs,m=>{$('readLog').textContent=m;});
@@ -492,10 +491,18 @@ const forget=()=>{try{sessionStorage.removeItem('tml_pass');localStorage.removeI
 $('bUnlock').onclick=async()=>{ const p=$('lockPass').value; if(!p)return; $('lockMsg').textContent='Membuka…'; try{ await tryUnlock(p,$('lockRem').checked); }catch(e){ $('lockMsg').textContent=(e&&e.name==='OperationError')?'Kode akses salah.':'Gagal: '+(e.message||e); } };
 $('lockPass').addEventListener('keydown',e=>{if(e.key==='Enter')$('bUnlock').click();});
 $('bLock').onclick=()=>{ forget(); location.reload(); };
+const CDN={pdf:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/',tess:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/',core:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/',lang:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int/'};
+async function ensureReader(){ if(window.READER_OK)return true; if(typeof BACA==='undefined')throw new Error('Berkas baca.js belum terunggah ke repository.');
+  const head=async u=>{ try{ return (await fetch(u,{method:'HEAD',cache:'no-store'})).ok; }catch(e){ return false; } };
+  let base=null; for(const b of ['baca/','']){ if(await head(b+'eng.traineddata.gz')&&await head(b+'tesseract.min.js')&&await head(b+'pdf.min.js')){ base=b; break; } }
+  const B=base===''?'./':base, P=base!==null?{src:'berkas lokal',pdf:B+'pdf.min.js',pdfw:B+'pdf.worker.min.js',tess:B+'tesseract.min.js',worker:B+'worker.min.js',core:B,lang:B}:{src:'CDN jsDelivr',pdf:CDN.pdf+'pdf.min.js',pdfw:CDN.pdf+'pdf.worker.min.js',tess:CDN.tess+'tesseract.min.js',worker:CDN.tess+'worker.min.js',core:CDN.core,lang:CDN.lang};
+  const load=src=>new Promise(res=>{ const e=document.createElement('script'); e.src=src; e.onload=()=>res(true); e.onerror=()=>res(false); document.head.append(e); });
+  if(typeof window.pdfjsLib==='undefined'&&!(await load(P.pdf)))throw new Error('Gagal memuat pembaca PDF dari '+P.src+'. Periksa koneksi internet, lalu coba lagi.');
+  if(typeof window.Tesseract==='undefined'&&!(await load(P.tess)))throw new Error('Gagal memuat OCR dari '+P.src+'. Periksa koneksi internet, lalu coba lagi.');
+  pdfjsLib.GlobalWorkerOptions.workerSrc=P.pdfw; window.BACA_PATHS=P; window.READER_OK=true; return true; }
 (async()=>{ const need=[['JSZip','jszip.min.js'],['html2canvas','html2canvas.min.js'],['jspdf','jspdf.umd.min.js'],['renderSheet','preview.js']].filter(([g])=>typeof window[g]==='undefined');
   if(!window.TML_VAULT&&!window.TML_TEMPLATES)need.push(['','vault.enc.js atau templates-data.js']);
-  const opt=[]; if(typeof window.pdfjsLib==='undefined')opt.push('baca/pdf.min.js'); if(typeof window.Tesseract==='undefined')opt.push('baca/tesseract.min.js'); if(typeof BACA==='undefined')opt.push('baca.js');
-  if(need.length||opt.length){ $('warn').hidden=false; $('warn').innerHTML='<b>Berkas pendukung belum terunggah ke repository:</b> '+need.map(n=>'<code>'+n[1]+'</code>').concat(opt.map(n=>'<code>'+n+'</code>')).join(', ')+'. Unggah file tersebut ke repository <b>di level yang sama dengan index.html</b> (untuk folder <code>baca</code>, unggah foldernya juga), tunggu 1–3 menit, lalu muat ulang dengan Ctrl+F5.'+(need.length?'':' <i>Aplikasi tetap berjalan; hanya fitur Baca dokumen otomatis yang belum aktif.</i>'); }
+  if(need.length){ $('warn').hidden=false; $('warn').innerHTML='<b>Berkas pendukung belum terunggah ke repository:</b> '+need.map(n=>'<code>'+n[1]+'</code>').join(', ')+'. Unggah berkas tersebut ke repository di level yang sama dengan index.html, tunggu 1–3 menit, lalu muat ulang dengan Ctrl+F5.'; }
   $('bLock').hidden=!window.TML_VAULT;
   if(!need.length&&!window.TML_VAULT){ D=Object.assign(DDEF(),window.TML_D||{}); startApp(); return; }   // mode terbuka
   let p=null; try{ p=sessionStorage.getItem('tml_pass')||localStorage.getItem('tml_pass'); }catch(e){}

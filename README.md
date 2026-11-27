@@ -20,7 +20,7 @@ Alamat: `https://zulkiflisyahbana-art.github.io/TML-HIBAH-Grand-Documentation/`
 - Kartu unit menampilkan **✓ Lengkap / ⚠ Belum lengkap / ✎ Sedang diedit**; tombol **Edit** pada laporan menyorot kolom yang dituju.
 
 ### Baca dokumen otomatis (tab 1)
-Setelah B/L, MoU, dan/atau NPWP diunggah, klik **🔍 Baca dokumen otomatis** (±30 detik). Aplikasi membaca dokumen **di browser Anda** (tidak ada yang dikirim ke server), menampilkan **hasil bacaan beserta sumbernya** untuk ditinjau, lalu **✔ Isi ke Data Proyek & Unit** mengisi form (bisa diedit). Kolom **kuning** = dari dokumen, **biru** = dari template contoh (cylinder/engine/color tidak ada di dokumen). Laporan verifikasi memuat kolom **Sumber dokumen** dan pemeriksaan silang (NPWP B/L ↔ kartu NPWP, chassis B/L ↔ MoU).
+Setelah B/L, MoU, dan/atau NPWP diunggah, klik **🔍 Baca dokumen otomatis** (±30 detik). Aplikasi membaca dokumen **di browser Anda** (dokumen tidak dikirim ke server), menampilkan **hasil bacaan beserta sumbernya** untuk ditinjau, lalu **✔ Isi ke Data Proyek & Unit** mengisi form (bisa diedit). Kolom **kuning** = dari dokumen, **biru** = dari template contoh (cylinder/engine/color tidak ada di dokumen). Laporan verifikasi memuat kolom **Sumber dokumen** dan pemeriksaan silang (NPWP B/L ↔ kartu NPWP, chassis B/L ↔ MoU).
 
 | Dokumen | Cara baca | Keandalan |
 |---|---|---|
@@ -34,7 +34,6 @@ Aturan keselamatan: nomor chassis hanya dikoreksi bila selisih **1 karakter** da
 ## 2. Isi paket (semua berkas sejajar dengan index.html)
 ```
 index.html  style.css  script.js  preview.js  baca.js
-baca/                 ← pembaca PDF + OCR (7 berkas, ±12 MB). UNGGAH FOLDER INI JUGA
 templates-data.js     ← template resmi + stempel + data contoh (TIDAK terenkripsi)
 vault.enc.js          ← kosong pada mode ini
 buat-vault.html       ← alat membuat vault terenkripsi (untuk beralih ke MODE RAHASIA)
@@ -50,8 +49,8 @@ Unggah `vault.enc.js` dan `templates-data.js` dari paket **MODE RAHASIA** (menim
 1. **Menimpa versi yang sedang berjalan:** buka repository → **Add file → Upload files** → ekstrak ZIP, **Ctrl+A** lalu seret **semua isi folder** (bukan folder induknya) → **Commit changes**. File bernama sama otomatis menimpa.
 2. Pastikan semua berkas di bagian 2 terlihat di daftar paling atas repository (bukan dalam subfolder). Folder `assets` dan `templates` dari versi lama tidak dipakai lagi dan boleh dihapus.
 3. Tunggu 1–3 menit (tab **Actions** hijau), buka alamat website, tekan **Ctrl+F5**.
-4. Jika ada berkas yang kurang, website menampilkan kotak peringatan merah yang menyebut namanya. Folder **`baca`** harus ikut terunggah (berisi 7 berkas); tanpa folder itu aplikasi tetap jalan, hanya tombol Baca dokumen otomatis yang tidak aktif.
-5. Pembaca dokumen butuh alamat https (GitHub Pages) atau `localhost`; tidak jalan jika `index.html` dibuka langsung dari folder komputer.
+4. Jika ada berkas inti yang kurang, website menampilkan kotak peringatan merah yang menyebut namanya.
+5. **Pembaca dokumen** (PDF + OCR) dimuat saat tombol **Baca dokumen otomatis** diklik: memakai berkas lokal bila ada (folder `baca` atau akar repository, lihat paket opsional *PEMBACA-DOKUMEN-7-BERKAS*), jika tidak ada **otomatis diunduh dari CDN jsDelivr** (perlu internet; hanya pustaka yang diunduh, dokumen Anda tetap diproses di browser dan tidak dikirim ke mana pun). Tidak perlu mengunggah folder `baca`. Butuh alamat https (GitHub Pages) atau `localhost`.
 
 ## 5. Arsip proyek ("folder khusus TML HIBAH")
 Struktur: `TML HIBAH / tahun / NAMA_PROYEK /` berisi `01_Dokumen_Sumber`, `02_Excel`, `03_PDF`, `04_Laporan_Verifikasi`, `data-proyek.json`, `jejak-aktivitas.txt`, `00_RINGKASAN.txt`.

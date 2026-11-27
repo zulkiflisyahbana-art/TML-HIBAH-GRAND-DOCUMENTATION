@@ -8,7 +8,7 @@ const money=s=>{const t=String(s).replace(/[^0-9.,]/g,'');return t?Number(t.repl
 const MON={JAN:'Jan',FEB:'Feb',MAR:'Mar',APR:'Apr',MAY:'May',JUN:'Jun',JUL:'Jul',AUG:'Aug',SEP:'Sep',OCT:'Oct',NOV:'Nov',DEC:'Dec',JANUARY:'Jan',FEBRUARY:'Feb',MARCH:'Mar',APRIL:'Apr',JUNE:'Jun',JULY:'Jul',AUGUST:'Aug',SEPTEMBER:'Sep',OCTOBER:'Oct',NOVEMBER:'Nov',DECEMBER:'Dec'};
 const title=s=>String(s||'').toLowerCase().replace(/\b([a-z])/g,m=>m.toUpperCase());
 let worker=null;
-async function getWorker(log){ if(worker)return worker; worker=await Tesseract.createWorker('eng',1,{workerPath:'baca/worker.min.js',corePath:'baca/',langPath:'baca/',gzip:true,logger:log||(()=>{})}); return worker; }
+async function getWorker(log){ if(worker)return worker; const Q=window.BACA_PATHS||{worker:'baca/worker.min.js',core:'baca/',lang:'baca/'}; worker=await Tesseract.createWorker('eng',1,{workerPath:Q.worker,corePath:Q.core,langPath:Q.lang,gzip:true,logger:log||(()=>{})}); return worker; }
 async function ocr(canvas,psm,log){ const w=await getWorker(log); await w.setParameters({tessedit_pageseg_mode:String(psm),preserve_interword_spaces:'1'}); const r=await w.recognize(canvas);
   return {text:r.data.text,lines:r.data.lines.map(l=>({t:l.text.trim(),x:l.bbox.x0,y:l.bbox.y0,y1:l.bbox.y1}))}; }
 async function renderCrop(pg,scale,rect){ const vp=pg.getViewport({scale}), x0=Math.round(rect[0]*vp.width), y0=Math.round(rect[1]*vp.height), w=Math.round((rect[2]-rect[0])*vp.width), h=Math.round((rect[3]-rect[1])*vp.height);
